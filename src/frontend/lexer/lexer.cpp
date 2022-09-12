@@ -51,7 +51,7 @@ bool Lexer::getToken(TokenInfo* tokenInfo)
     }
 
     /* deal comment */
-    if (ch == '/') {
+    while (ch == '/') {
       ch = fgetc(fp);
       if (ch == '/') {
         dealSingleLineComment();
@@ -62,6 +62,7 @@ bool Lexer::getToken(TokenInfo* tokenInfo)
       } else {
         ch = '/';
         fseek(fp, -1L, 1);
+        break;
       }
     }
 

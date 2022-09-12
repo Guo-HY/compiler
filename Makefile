@@ -22,8 +22,10 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) $(addprefix -I,${DIRS}) -c $< -o $@
 
 clean:
-	rm $(OBJS)
+	rm $(OBJS) *.zip gsc 
 
 run: gsc
 	./gsc
 	
+zip:
+	zip -q -r src$(shell date "+%Y.%m.%d").zip src
