@@ -1,5 +1,6 @@
 #include "lexer.hpp"
 #include <stdlib.h>
+#include "../include/error.hpp"
 
 std::unordered_map<std::string, TokenType> reservedTable {
   {"main",    MAINTK},
@@ -70,7 +71,7 @@ bool Lexer::getToken(TokenInfo* tokenInfo)
       return dealIntConst(tokenInfo);
     } else if (ch == '"') {
       return dealFormatString(tokenInfo);
-    } else if (!isBlank(ch)){
+    } else if (!isBlank(ch) && ch != EOF){
       return dealOtherTK(tokenInfo);
     }
   }
@@ -81,6 +82,7 @@ bool Lexer::dealIdent(TokenInfo* tokenInfo)
   tokenInfo->str.clear();
   if (!identifierNondigit(ch)) {
     /* program error */
+    Log("program error\n");
     return false;
   }
   do {
@@ -101,6 +103,7 @@ bool Lexer::dealIntConst(TokenInfo* tokenInfo)
   tokenInfo->str.clear();
   if (!isDigit(ch)) {
     /* program error */
+    Log("program error\n");
     return false;
   }
 
@@ -111,6 +114,7 @@ bool Lexer::dealIntConst(TokenInfo* tokenInfo)
 
   if (tokenInfo->str.length() > 1 && tokenInfo->str[0] == '0') {
     /* error: IntConst has leading zeros*/
+    Log("IntConst has leading zeros\n");
     return false;
   }
   tokenInfo->tokenType = INTCON;
@@ -126,6 +130,7 @@ bool Lexer::dealFormatString(TokenInfo* tokenInfo)
   tokenInfo->str.clear();
   if (ch != '"') {
     /* program error*/
+    Log("program error\n");
     return false;
   }
   do {
@@ -135,10 +140,12 @@ bool Lexer::dealFormatString(TokenInfo* tokenInfo)
     ch = fgetc(fp);
     if (formatChar && ch != 'd') {
       /* format error */
+      Log("format error : %% doesn't follow with d\n");
       return false;
     }
     if (backSlash && ch != 'n') {
       /* format error */
+      Log("format error : \\ doesn't follow with n\n");
       return false;
     }
     formatChar = false;
@@ -147,6 +154,7 @@ bool Lexer::dealFormatString(TokenInfo* tokenInfo)
 
   if (ch != '"') {
     /* error : string is not terminate with " or string has illegal char*/
+    Log("format string is not terminate with \" or string has illegal char\n");
     return false;
   }
   tokenInfo->str.push_back(ch);
@@ -192,6 +200,7 @@ bool Lexer::dealOtherTK(TokenInfo* tokenInfo)
     tmp = fgetc(fp);
     if (ch != tmp) {
       /* error : need double but has single char */
+      Log("need double but has single char(& or |)\n");
       return false;
     }
     tokenInfo->str.append(2, ch);
@@ -199,6 +208,7 @@ bool Lexer::dealOtherTK(TokenInfo* tokenInfo)
     break;
   default:
     /* error : invalid identifier */
+    Log("invalid identifier : %c\n", ch);
     return false;
   }
   tokenInfo->tokenType = reservedTable.at(tokenInfo->str);
@@ -217,7 +227,7 @@ bool Lexer::isDigit(char c)
 
 void Lexer::skipBlank() 
 {
-  while (ch == ' ' || ch == '\t' || ch == '\n') {
+  while (ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r') {
     if (ch == '\n') {
       line++;
     }
@@ -227,12 +237,13 @@ void Lexer::skipBlank()
 
 bool Lexer::isBlank(char c)
 {
-  return c == ' ' || c == '\t' || c == '\n';
+  return c == ' ' || c == '\t' || c == '\n' || c == '\r';
 }
 
 bool Lexer::dealSingleLineComment()
 {
   if (ch != '/') { 
+    Log("program error\n");
     return false; 
   }
   while (ch != '\n' && ch != EOF) {
@@ -245,6 +256,7 @@ bool Lexer::dealMultiLineComment()
 {
   bool isAsterisk = false;
   if (ch != '*') {
+    Log("program error\n");
     return false;
   }
   do {
@@ -262,5 +274,6 @@ bool Lexer::dealMultiLineComment()
     }
   } while (ch != EOF);
   /* error : multi-line Comment dosen't have \*\/ */
+  Log("multi-line Comment dosen't have */\n");
   return false;
 }

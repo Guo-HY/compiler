@@ -23,3 +23,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(HEADERS)
 
 clean:
 	rm $(OBJS)
+
+run: gsc
+	./gsc
+	

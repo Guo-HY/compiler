@@ -46,7 +46,8 @@ char tokenName[][20] = {
 
 int main(int argc, char **argv)
 {
-  FILE *fp = fopen(argv[1], "r");
+  FILE *fp = fopen("testfile.txt", "r");
+  freopen("output.txt", "w", stdout);
   if (fp == NULL) {
     printf("error : fp == NULL\n");
     exit(1);
