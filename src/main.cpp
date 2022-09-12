@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "frontend/lexer/lexer.hpp"
+#include <error.hpp>
 
 char tokenName[][20] = {
   "IDENFR",
@@ -49,8 +50,7 @@ int main(int argc, char **argv)
   FILE *fp = fopen("testfile.txt", "r");
   freopen("output.txt", "w", stdout);
   if (fp == NULL) {
-    printf("error : fp == NULL\n");
-    exit(1);
+    panic("can't open source file");
   }
   Lexer lexer(fp);
   bool ret;
@@ -59,7 +59,7 @@ int main(int argc, char **argv)
   while (true) {
     ret = lexer.getToken(&tokenInfo);
     if (ret == false) {
-      printf("lexer has something error\n");
+      Log("lexer has something error\n");
       exit(1);
     }
     if (tokenInfo.tokenType == END) {
