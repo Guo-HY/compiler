@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <frontend/lexer/lexer.hpp>
+#include "frontend/lexer/lexer.hpp"
 
 char tokenName[][20] = {
   "IDENFR",

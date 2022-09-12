@@ -1,6 +1,44 @@
 #include "lexer.hpp"
 #include <stdlib.h>
 
+std::unordered_map<std::string, TokenType> reservedTable {
+  {"main",    MAINTK},
+  {"const",   CONSTTK},
+  {"int",     INTTK},
+  {"break",   BREAKTK},
+  {"continue",CONTINUETK},
+  {"if",      IFTK},
+  {"else",    ELSETK},
+  {"while",   WHILETK},
+  {"getint",  GETINTTK},
+  {"printf",  PRINTFTK},
+  {"return",  RETURNTK},
+  {"void",    VOIDTK},
+  {"!",       NOT},
+  {"&&",      AND},
+  {"||",      OR},
+  {"+",       PLUS}, 
+  {"-",       MINU},
+  {"*",       MULT}, 
+  {"/",       DIV},
+  {"%",       MOD},
+  {"<",       LSS},
+  {"<=",      LEQ},
+  {">",       GRE},
+  {">=",      GEQ},
+  {"==",      EQL},
+  {"!=",      NEQ},
+  {"=",       ASSIGN},
+  {";",       SEMICN},
+  {",",       COMMA},
+  {"(",       LPARENT},
+  {")",       RPARENT},
+  {"[",       LBRACK},
+  {"]",       RBRACK},
+  {"{",       LBRACE},
+  {"}",       RBRACE},
+};
+
 bool Lexer::getToken(TokenInfo* tokenInfo) 
 {
   while (true) {
@@ -50,8 +88,8 @@ bool Lexer::dealIdent(TokenInfo* tokenInfo)
     ch = fgetc(fp);
   } while (identifierNondigit(ch) || isDigit(ch));
 
-  if (reserved.count(tokenInfo->str) > 0) {
-    tokenInfo->tokenType = reserved.at(tokenInfo->str);
+  if (reservedTable.count(tokenInfo->str) > 0) {
+    tokenInfo->tokenType = reservedTable.at(tokenInfo->str);
   } else {
     tokenInfo->tokenType = IDENFR;
   }
@@ -163,7 +201,7 @@ bool Lexer::dealOtherTK(TokenInfo* tokenInfo)
     /* error : invalid identifier */
     return false;
   }
-  tokenInfo->tokenType = reserved.at(tokenInfo->str);
+  tokenInfo->tokenType = reservedTable.at(tokenInfo->str);
   return true;
 }
 

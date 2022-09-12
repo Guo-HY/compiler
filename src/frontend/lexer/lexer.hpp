@@ -46,44 +46,6 @@ enum TokenType {
   END,
 };
 
-std::unordered_map<std::string, TokenType> reserved {
-  {"main",    MAINTK},
-  {"const",   CONSTTK},
-  {"int",     INTTK},
-  {"break",   BREAKTK},
-  {"continue",CONTINUETK},
-  {"if",      IFTK},
-  {"else",    ELSETK},
-  {"while",   WHILETK},
-  {"getint",  GETINTTK},
-  {"printf",  PRINTFTK},
-  {"return",  RETURNTK},
-  {"void",    VOIDTK},
-  {"!",       NOT},
-  {"&&",      AND},
-  {"||",      OR},
-  {"+",       PLUS}, 
-  {"-",       MINU},
-  {"*",       MULT}, 
-  {"/",       DIV},
-  {"%",       MOD},
-  {"<",       LSS},
-  {"<=",      LEQ},
-  {">",       GRE},
-  {">=",      GEQ},
-  {"==",      EQL},
-  {"!=",      NEQ},
-  {"=",       ASSIGN},
-  {";",       SEMICN},
-  {",",       COMMA},
-  {"(",       LPARENT},
-  {")",       RPARENT},
-  {"[",       LBRACK},
-  {"]",       RBRACK},
-  {"{",       LBRACE},
-  {"}",       RBRACE},
-};
-
 struct TokenInfo {
   TokenType tokenType;
   std::string str;
@@ -116,12 +78,12 @@ class Lexer {
   bool dealFormatString(TokenInfo* tokenInfo);
   bool dealOtherTK(TokenInfo* tokenInfo);
 
-  bool Lexer::identifierNondigit(char c);
-  bool Lexer::isDigit(char c);
-  void Lexer::skipBlank();
-  bool Lexer::isBlank(char c);
-  bool Lexer::dealSingleLineComment();
-  bool Lexer::dealMultiLineComment();
+  bool identifierNondigit(char c);
+  bool isDigit(char c);
+  void skipBlank();
+  bool isBlank(char c);
+  bool dealSingleLineComment();
+  bool dealMultiLineComment();
 };
 
 #endif

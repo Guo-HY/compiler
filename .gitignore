@@ -33,3 +33,5 @@
 
 obj/
 .vscode/
+*.txt
+gsc
