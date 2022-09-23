@@ -4,7 +4,7 @@ extern char tokenName[][20];
 
 char tokenValue[][20] = {
   "",
-  "int\n", 
+  "", 
   "",
   "main\n",
   "const\n",
@@ -78,7 +78,6 @@ std::string DeclNode::toString()
   } else {
     Log("error\n");
   }
-  s += "<Decl>\n";
   return s;
 }
 
@@ -88,7 +87,10 @@ std::string ConstDeclNode::toString()
   int i;
   s += tokenToString(TokenType::CONSTTK);
   s += bTypeNode->toString();
-  Assert(constDefNodes.size() > 0, "error");
+  if (constDefNodes.size() == 0) {
+    Log("error\n");
+  }
+  // Assert(constDefNodes.size() > 0, "error");
   s += constDefNodes[0]->toString();
   for (i = 1; i < constDefNodes.size(); i++) {
     s += tokenToString(TokenType::COMMA);
@@ -184,8 +186,8 @@ std::string InitValNode::toString()
     for (int i = 0; i < initValNodes.size(); i++) {
       if (i > 0) {
         s += tokenToString(TokenType::COMMA);
-        s += initValNodes[i]->toString();
       }
+      s += initValNodes[i]->toString();
     }
     s += tokenToString(TokenType::RBRACE);
   } else {
@@ -284,7 +286,6 @@ std::string BlockItemNode::toString()
   } else if (blockItemType == BlockItemType::BLOCKITEM_STMT) {
     s += stmtNode->toString();
   }
-  s += "<BlockItem>\n";
   return s;
 }
 

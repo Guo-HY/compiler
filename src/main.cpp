@@ -66,13 +66,15 @@ int main(int argc, char **argv)
     Log("lexer has something error\n");
     exit(1);
   }
-  // int size = tokenInfoList.size();
-  // for (int i = 0;i < size - 1; i++) {
-  //   printf("%s %s\n", tokenName[tokenInfoList[i]->tokenType], tokenInfoList[i]->str.c_str());
-  // }
 
   Parser parser;
   parser.toString();
+
+  freopen("token.txt", "w", stdout);
+  int size = tokenInfoList.size();
+  for (int i = 0;i < size - 1; i++) {
+    printf("%s %s\n", tokenName[tokenInfoList[i]->tokenType], tokenInfoList[i]->str.c_str());
+  }
 
   return 0;
 }

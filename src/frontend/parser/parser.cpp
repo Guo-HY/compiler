@@ -1,6 +1,9 @@
 #include "parser.hpp"
 #include "../include/error.hpp"
 
+extern char tokenName[][20];
+extern char tokenValue[][20];
+
 TokenInfo* Parser::popToken() 
 {
   if (tokenInfoList[nowTokenListPtr]->tokenType == TokenType::END) {
@@ -400,7 +403,7 @@ PrimaryExpNode* Parser::primaryExpAnalyse()
     node->numberNode = numberAnalyse();
     break;
   default:
-    Log("error\n");
+    Log("error:tokenType=%s,tokenValue=%s,poi=%d\n", tokenName[t], tokenValue[t], nowTokenListPtr);
     break;
   }
   return node;

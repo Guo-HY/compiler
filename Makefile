@@ -22,7 +22,10 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) $(addprefix -I,${DIRS}) -c $< -o $@
 
 clean:
-	rm $(OBJS) *.zip gsc 
+	rm -f  *.zip gsc 
+	rm -rf $(OBJ_DIR)
+	rm -f output.txt
+	rm -f token.txt
 
 run: gsc
 	./gsc
