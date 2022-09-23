@@ -8,12 +8,16 @@ extern std::vector<TokenInfo*> tokenInfoList;
 class Parser {
   public:
   Parser() {
-    nowTokenListPtr = 0;
+    this->nowTokenListPtr = 0;
+    this->root = NULL;
   }
 
-  CompUnitNode* syntaxAnalyse();
+  SyntaxNode* syntaxAnalyse();
+  void toString();
 
   private:
+  /* 根节点 */
+  CompUnitNode* root;
   /* 当前关注的token指针，处理完一个语法元素后，指针永远指向下一个 */
   int nowTokenListPtr;
   /* pop 会返回当前token的指针并将nowTokenListPtr加一 */
@@ -57,9 +61,5 @@ class Parser {
   ConstExpNode* constExpAnalyse();
 
 };
-
-
-
-
 
 #endif

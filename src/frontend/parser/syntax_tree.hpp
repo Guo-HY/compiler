@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include "../lexer/lexer.hpp"
+#include "../../include/error.hpp"
 
 class SyntaxNode;
 class CompUnitNode;
@@ -130,7 +131,7 @@ class ConstDefNode : public SyntaxNode {
   public:
   TokenInfo* ident;
   int arrayDimension;
-  std::vector<ConstExpNode*> ConstExpNodes;
+  std::vector<ConstExpNode*> constExpNodes;
   ConstInitValNode* constInitValNode;
   
   public:
@@ -266,10 +267,11 @@ class StmtNode : public SyntaxNode {
   CondNode* condNode;
   std::vector<StmtNode*> stmtNodes;
   TokenInfo* formatString;
-
+  bool hasElse;
   public:
   StmtNode(): stmtType(STMT_NONE), lValNode(NULL),
-  blockNode(NULL), condNode(NULL), formatString(NULL) {}
+  blockNode(NULL), condNode(NULL), formatString(NULL),
+  hasElse(false) {}
   std::string toString() override;
 };
 

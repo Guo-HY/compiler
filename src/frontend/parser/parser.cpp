@@ -85,7 +85,7 @@ ConstDefNode* Parser::constDefAnalyse()
   while (peekToken(0)->tokenType == TokenType::LBRACK) {
     popToken(); /* eat LBRACK */
     (node->arrayDimension)++;
-    node->ConstExpNodes.push_back(constExpAnalyse());
+    node->constExpNodes.push_back(constExpAnalyse());
     popToken(); /* eat RBRACK */
   }
   popToken(); /* eat ASSIGN */
@@ -310,6 +310,7 @@ StmtNode* Parser::stmtAnalyse()
     node->stmtNodes.push_back(stmtAnalyse());
     if (peekToken(0)->tokenType == TokenType::ELSETK) {
       popToken(); /* eat ELSETK */
+      node->hasElse = true;
       node->stmtNodes.push_back(stmtAnalyse());
     }
   } else if (t == TokenType::LBRACE) {
@@ -543,4 +544,22 @@ ConstExpNode* Parser::constExpAnalyse()
   ConstExpNode* node = new ConstExpNode();
   node->addExpNode = addExpAnalyse();
   return node;
+}
+
+void Parser::toString()
+{
+  if (root == NULL) {
+    root = compUnitAnalyse();
+  }
+  std::string s = root->toString();
+  printf("%s", s.c_str());
+}
+
+SyntaxNode* Parser::syntaxAnalyse()
+{ 
+  if (root != NULL) {
+    return root;
+  }
+  root = compUnitAnalyse();
+  return root;
 }

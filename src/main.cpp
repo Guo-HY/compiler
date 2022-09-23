@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "frontend/lexer/lexer.hpp"
+#include "frontend/parser/parser.hpp"
 #include <error.hpp>
 
 char tokenName[][20] = {
@@ -65,11 +66,13 @@ int main(int argc, char **argv)
     Log("lexer has something error\n");
     exit(1);
   }
-  int size = tokenInfoList.size();
-  for (int i = 0;i < size - 1; i++) {
-    printf("%s %s\n", tokenName[tokenInfoList[i]->tokenType], tokenInfoList[i]->str.c_str());
-  }
+  // int size = tokenInfoList.size();
+  // for (int i = 0;i < size - 1; i++) {
+  //   printf("%s %s\n", tokenName[tokenInfoList[i]->tokenType], tokenInfoList[i]->str.c_str());
+  // }
 
+  Parser parser;
+  parser.toString();
 
   return 0;
 }
