@@ -40,6 +40,28 @@ std::unordered_map<std::string, TokenType> reservedTable {
   {"}",       RBRACE},
 };
 
+/* tokenInfoList中存放的是结构体指针,END作为结尾元素 */
+std::vector<TokenInfo*> tokenInfoList;
+
+bool Lexer::getAllToken()
+{
+  bool r;
+  while(true) {
+    TokenInfo* tokenInfo = new TokenInfo();
+    r = getToken(tokenInfo);
+    if (r == false) {
+      /* lexer has someting error */
+      return false;
+    }
+
+    tokenInfoList.push_back(tokenInfo); 
+    if (tokenInfo->tokenType == END) {
+      break;
+    }
+  }
+  return true;
+}
+
 bool Lexer::getToken(TokenInfo* tokenInfo) 
 {
   while (true) {

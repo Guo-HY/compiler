@@ -1,0 +1,65 @@
+#ifndef _PARSER_H
+#define _PARSER_H 1
+
+#include "syntax_tree.hpp"
+
+extern std::vector<TokenInfo*> tokenInfoList;
+
+class Parser {
+  public:
+  Parser() {
+    nowTokenListPtr = 0;
+  }
+
+  CompUnitNode* syntaxAnalyse();
+
+  private:
+  /* 当前关注的token指针，处理完一个语法元素后，指针永远指向下一个 */
+  int nowTokenListPtr;
+  /* pop 会返回当前token的指针并将nowTokenListPtr加一 */
+  TokenInfo* popToken();
+  /* peek 会返回当前位置+num处的token，但不会改变nowTokenListPtr */
+  TokenInfo* peekToken(int num);
+  /* 从当前位置向后找，判断先遇到分号还是赋值等号，若先是等号则返回true  */
+  bool isAssign();
+
+  CompUnitNode* compUnitAnalyse();
+  DeclNode* declAnalyse();
+  ConstDeclNode* constDeclAnalyse();
+  BTypeNode* bTypeAnalyse();
+  ConstDefNode* constDefAnalyse();
+  ConstInitValNode* constInitValAnalyse();
+  VarDeclNode* varDeclAnalyse();
+  VarDefNode* varDefAnalyse();
+  InitValNode* initValAnalyse();
+  FuncDefNode* funcDefAnalyse();
+  MainFuncDefNode* mainFuncDefAnalyse();
+  FuncTypeNode* funcTypeAnalyse();
+  FuncFParamsNode* funcFParamsAnalyse();
+  FuncFParamNode* FuncFParamAnalyse();
+  BlockNode* blockAnalyse();
+  BlockItemNode* blockItemAnalyse();
+  StmtNode* stmtAnalyse();
+  ExpNode* expAnalyse();
+  CondNode* condAnalyse();
+  LValNode* lValAnalyse();
+  PrimaryExpNode* primaryExpAnalyse();
+  NumberNode* numberAnalyse();
+  UnaryExpNode* unaryExpAnalyse();
+  UnaryOpNode* unaryOpAnalyse();
+  FuncRParamsNode* funcRParamsAnalyse();
+  MulExpNode* mulExpAnalyse();
+  AddExpNode* addExpAnalyse();
+  RelExpNode* relExpAnalyse();
+  EqExpNode* eqExpAnalyse();
+  LAndExpNode* lAndExpAnalyse();
+  LOrExpNode* lOrExpAnalyse();
+  ConstExpNode* constExpAnalyse();
+
+};
+
+
+
+
+
+#endif

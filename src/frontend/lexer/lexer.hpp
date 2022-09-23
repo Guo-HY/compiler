@@ -3,6 +3,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 enum TokenType {
   IDENFR,
@@ -45,7 +46,7 @@ enum TokenType {
   RBRACE,
   END,
 };
-
+/* TODO : 改成类 */
 struct TokenInfo {
   TokenType tokenType;
   std::string str;
@@ -66,7 +67,7 @@ class Lexer {
   }
 
   bool getToken(TokenInfo* tokenInfo);
-
+  bool getAllToken();
   private:
 
   char ch;
