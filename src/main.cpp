@@ -3,47 +3,7 @@
 #include "frontend/parser/parser.hpp"
 #include <error.hpp>
 
-char tokenName[][20] = {
-  "IDENFR",
-  "INTCON",
-  "STRCON",
-  "MAINTK",
-  "CONSTTK",
-  "INTTK",
-  "BREAKTK",
-  "CONTINUETK",
-  "IFTK",
-  "ELSETK",
-  "NOT",
-  "AND",
-  "OR",
-  "WHILETK",
-  "GETINTTK",
-  "PRINTFTK",
-  "RETURNTK",
-  "PLUS",
-  "MINU",
-  "VOIDTK",
-  "MULT",
-  "DIV",
-  "MOD",
-  "LSS",
-  "LEQ",
-  "GRE",
-  "GEQ",
-  "EQL",
-  "NEQ",
-  "ASSIGN",
-  "SEMICN",
-  "COMMA",
-  "LPARENT",
-  "RPARENT",
-  "LBRACK",
-  "RBRACK",
-  "LBRACE", 
-  "RBRACE",
-  "END",
-};
+extern char tokenName[][20];
 
 void getTokenTest(Lexer* lexer);
 extern std::vector<TokenInfo*> tokenInfoList;

@@ -1,48 +1,7 @@
 #include "syntax_tree.hpp"
 
 extern char tokenName[][20];
-
-char tokenValue[][20] = {
-  "",
-  "", 
-  "",
-  "main\n",
-  "const\n",
-  "int\n",
-  "break\n",
-  "continue\n",
-  "if\n",
-  "else\n",
-  "!\n",
-  "&&\n",
-  "||\n",
-  "while\n",
-  "getint\n",
-  "printf\n",
-  "return\n",
-  "+\n",
-  "-\n",
-  "void\n",
-  "*\n",
-  "/\n",
-  "%\n",
-  "<\n",
-  "<=\n",
-  ">\n",
-  ">=\n",
-  "==\n",
-  "!=\n",
-  "=\n",
-  ";\n",
-  ",\n",
-  "(\n",
-  ")\n",
-  "[\n",
-  "]\n",
-  "{\n",
-  "}\n",
-};
-
+extern char tokenValue[][20];
 
 std::string tokenToString(TokenType t) 
 {
