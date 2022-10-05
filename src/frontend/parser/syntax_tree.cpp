@@ -16,10 +16,10 @@ std::string CompUnitNode::toString()
 {
   std::string s;
   int i;
-  for (i = 0; i < declNodes.size(); i++) {
+  for (i = 0; i < (int)declNodes.size(); i++) {
     s += declNodes[i]->toString();
   }
-  for (i = 0; i < funcDefNodes.size(); i++) {
+  for (i = 0; i < (int)funcDefNodes.size(); i++) {
     s += funcDefNodes[i]->toString();
   }
   s += mainFuncDefNode->toString();
@@ -51,7 +51,7 @@ std::string ConstDeclNode::toString()
   }
   // Assert(constDefNodes.size() > 0, "error");
   s += constDefNodes[0]->toString();
-  for (i = 1; i < constDefNodes.size(); i++) {
+  for (i = 1; i < (int)constDefNodes.size(); i++) {
     s += tokenToString(TokenType::COMMA);
     s += constDefNodes[i]->toString();
   }
@@ -74,7 +74,7 @@ std::string ConstDefNode::toString()
   s += ident->str;
   s += "\n";
 
-  for (int i = 0; i < constExpNodes.size(); i++) {
+  for (int i = 0; i < (int)constExpNodes.size(); i++) {
     s += tokenToString(TokenType::LBRACK);
     s += constExpNodes[i]->toString();
     s += tokenToString(TokenType::RBRACK);
@@ -90,7 +90,7 @@ std::string ConstInitValNode::toString()
   std::string s;
   if (initArray) {
     s += tokenToString(TokenType::LBRACE);
-    for (int i = 0; i < constInitValNodes.size(); i++) {
+    for (int i = 0; i < (int)constInitValNodes.size(); i++) {
       if (i > 0) {
         s += tokenToString(TokenType::COMMA);
       }
@@ -109,7 +109,7 @@ std::string VarDeclNode::toString()
   std::string s;
   s += bTypeNode->toString();
   s += varDefNodes[0]->toString();
-  for (int i = 1;i < varDefNodes.size(); i++) {
+  for (int i = 1;i < (int)varDefNodes.size(); i++) {
     s += tokenToString(TokenType::COMMA);
     s += varDefNodes[i]->toString();
   }
@@ -124,7 +124,7 @@ std::string VarDefNode::toString()
   s += tokenToString(TokenType::IDENFR);
   s += ident->str;
   s += "\n";
-  for (int i = 0; i < constExpNodes.size(); i++) {
+  for (int i = 0; i < (int)constExpNodes.size(); i++) {
     s += tokenToString(TokenType::LBRACK);
     s += constExpNodes[i]->toString();
     s += tokenToString(TokenType::RBRACK);
@@ -142,7 +142,7 @@ std::string InitValNode::toString()
   std::string s;
   if (initArray) {
     s += tokenToString(TokenType::LBRACE);
-    for (int i = 0; i < initValNodes.size(); i++) {
+    for (int i = 0; i < (int)initValNodes.size(); i++) {
       if (i > 0) {
         s += tokenToString(TokenType::COMMA);
       }
@@ -197,7 +197,7 @@ std::string FuncFParamsNode::toString()
 {
   std::string s;
   s += funcFParamNodes[0]->toString();
-  for (int i = 1; i < funcFParamNodes.size(); i++) {
+  for (int i = 1; i < (int)funcFParamNodes.size(); i++) {
     s += tokenToString(TokenType::COMMA);
     s += funcFParamNodes[i]->toString();
   }
@@ -216,7 +216,7 @@ std::string FuncFParamNode::toString()
     s += tokenToString(TokenType::LBRACK);
     s += tokenToString(TokenType::RBRACK);
   }
-  for (int i = 0; i < constExpNodes.size(); i++) {
+  for (int i = 0; i < (int)constExpNodes.size(); i++) {
     s += tokenToString(TokenType::LBRACK);
     s += constExpNodes[i]->toString();
     s += tokenToString(TokenType::RBRACK);
@@ -229,7 +229,7 @@ std::string BlockNode::toString()
 {
   std::string s;
   s += tokenToString(TokenType::LBRACE);
-  for (int i = 0; i < blockItemNodes.size(); i++) {
+  for (int i = 0; i < (int)blockItemNodes.size(); i++) {
     s += blockItemNodes[i]->toString();
   }
   s += tokenToString(TokenType::RBRACE);
@@ -259,7 +259,7 @@ std::string StmtNode::toString()
     s += tokenToString(TokenType::STRCON);
     s += formatString->str;
     s += "\n";
-    for (int i = 0; i < expNodes.size(); i++) {
+    for (int i = 0; i < (int)expNodes.size(); i++) {
       s += tokenToString(TokenType::COMMA);
       s += expNodes[i]->toString();
     }
@@ -352,7 +352,7 @@ std::string LValNode::toString()
   s += tokenToString(TokenType::IDENFR);
   s += ident->str;
   s += "\n";
-  for (int i = 0; i < expNodes.size(); i++) {
+  for (int i = 0; i < (int)expNodes.size(); i++) {
     s += tokenToString(TokenType::LBRACK);
     s += expNodes[i]->toString();
     s += tokenToString(TokenType::RBRACK);
@@ -437,7 +437,7 @@ std::string FuncRParamsNode::toString()
 {
   std::string s;
   s += expNodes[0]->toString();
-  for (int i = 1; i < expNodes.size(); i++) {
+  for (int i = 1; i < (int)expNodes.size(); i++) {
     s += tokenToString(TokenType::COMMA);
     s += expNodes[i]->toString();
   }
@@ -448,10 +448,10 @@ std::string FuncRParamsNode::toString()
 std::string MulExpNode::toString()
 {
   std::string s;
-  for (int i = 0; i < unaryExpNodes.size(); i++) {
+  for (int i = 0; i < (int)unaryExpNodes.size(); i++) {
     s += unaryExpNodes[i]->toString();
     s += "<MulExp>\n";
-    if (i < ops.size()) {
+    if (i < (int)ops.size()) {
       s += tokenToString(ops[i]->tokenType);
     }
   }
@@ -461,10 +461,10 @@ std::string MulExpNode::toString()
 std::string AddExpNode::toString()
 {
   std::string s;
-  for (int i = 0; i < MulExpNodes.size(); i++) {
+  for (int i = 0; i < (int)MulExpNodes.size(); i++) {
     s += MulExpNodes[i]->toString();
     s += "<AddExp>\n";
-    if (i < ops.size()) {
+    if (i < (int)ops.size()) {
       s += tokenToString(ops[i]->tokenType);
     }
   }
@@ -474,10 +474,10 @@ std::string AddExpNode::toString()
 std::string RelExpNode::toString()
 {
   std::string s;
-  for (int i = 0; i < addExpNodes.size(); i++) {
+  for (int i = 0; i < (int)addExpNodes.size(); i++) {
     s += addExpNodes[i]->toString();
     s += "<RelExp>\n";
-    if (i < ops.size()) {
+    if (i < (int)ops.size()) {
       s += tokenToString(ops[i]->tokenType);
     }
   }
@@ -487,10 +487,10 @@ std::string RelExpNode::toString()
 std::string EqExpNode::toString()
 {
   std::string s;
-  for (int i = 0; i < relExpNodes.size(); i++) {
+  for (int i = 0; i < (int)relExpNodes.size(); i++) {
     s += relExpNodes[i]->toString();
     s += "<EqExp>\n";
-    if (i < ops.size()) {
+    if (i < (int)ops.size()) {
       s += tokenToString(ops[i]->tokenType);
     }
   }
@@ -500,10 +500,10 @@ std::string EqExpNode::toString()
 std::string LAndExpNode::toString()
 {
   std::string s;
-  for (int i = 0; i < eqExpNodes.size(); i++) {
+  for (int i = 0; i < (int)eqExpNodes.size(); i++) {
     s += eqExpNodes[i]->toString();
     s += "<LAndExp>\n";
-    if (i < ops.size()) {
+    if (i < (int)ops.size()) {
       s += tokenToString(ops[i]->tokenType);
     }
   }
@@ -513,10 +513,10 @@ std::string LAndExpNode::toString()
 std::string LOrExpNode::toString()
 {
   std::string s;
-  for (int i = 0; i < lAndExpNodes.size(); i++) {
+  for (int i = 0; i < (int)lAndExpNodes.size(); i++) {
     s += lAndExpNodes[i]->toString();
     s += "<LOrExp>\n";
-    if (i < ops.size()) {
+    if (i < (int)ops.size()) {
       s += tokenToString(ops[i]->tokenType);
     }
   }

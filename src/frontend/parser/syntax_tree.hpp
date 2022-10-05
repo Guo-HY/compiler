@@ -129,13 +129,14 @@ class BTypeNode : public SyntaxNode {
 
 class ConstDefNode : public SyntaxNode {
   public:
+  BTypeNode* bTypeNode;
   TokenInfo* ident;
   int arrayDimension;
   std::vector<ConstExpNode*> constExpNodes;
   ConstInitValNode* constInitValNode;
   
   public:
-  ConstDefNode(): ident(NULL), arrayDimension(0), 
+  ConstDefNode(): bTypeNode(NULL), ident(NULL), arrayDimension(0), 
   constInitValNode(NULL) {}
   std::string toString() override;
 };
@@ -165,12 +166,13 @@ class VarDeclNode : public SyntaxNode {
 class VarDefNode : public SyntaxNode {
   public:
   TokenInfo* ident;
+  BTypeNode* bTypeNode;
   std::vector<ConstExpNode*> constExpNodes;
   bool hasInitVal;  
   InitValNode* initValNode;
   
   public:
-  VarDefNode(): ident(NULL), hasInitVal(false), initValNode(NULL) {}
+  VarDefNode(): ident(NULL), bTypeNode(NULL), hasInitVal(false), initValNode(NULL) {}
   std::string toString() override;
 };
 

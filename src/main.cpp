@@ -1,23 +1,34 @@
 #include <stdio.h>
 #include "frontend/lexer/lexer.hpp"
 #include "frontend/parser/parser.hpp"
+#include "frontend/parser/symbol_table.hpp"
 #include <error.hpp>
 
 extern char tokenName[][20];
+extern std::vector<TokenInfo*> tokenInfoList;
+extern SymbolTable* currentSymbolTable;
+extern SymbolTable* funcTable;
 
 void getTokenTest(Lexer* lexer);
-extern std::vector<TokenInfo*> tokenInfoList;
+void getAllTokenTest(Lexer* lexer);
+extern void symbolTableInit();
+extern void allSymbolTableToString();
 
 int main(int argc, char **argv)
 {
-  FILE *fp = fopen("testfile.txt", "r");
-  freopen("output.txt", "w", stdout);
+  FILE* fp = fopen("testfile.txt", "r");
+  FILE* discard;
+  bool ret;
+  
+  discard = freopen("output.txt", "w", stdout);
   if (fp == NULL) {
     panic("can't open source file");
   }
 
+  symbolTableInit();
+
   Lexer lexer(fp);
-  bool ret;
+  
   // getTokenTest(&lexer);
 
   ret = lexer.getAllToken();
@@ -26,15 +37,13 @@ int main(int argc, char **argv)
     Log("lexer has something error\n");
     exit(1);
   }
+  // getAllTokenTest(&lexer);
 
   Parser parser;
   parser.toString();
 
-  // freopen("token.txt", "w", stdout);
-  // int size = tokenInfoList.size();
-  // for (int i = 0;i < size - 1; i++) {
-  //   printf("%s %s\n", tokenName[tokenInfoList[i]->tokenType], tokenInfoList[i]->str.c_str());
-  // }
+  // discard = freopen("table.txt", "w", stdout);
+  // allSymbolTableToString();
 
   return 0;
 }
@@ -57,6 +66,19 @@ void getTokenTest(Lexer* lexer)
     if (tokenInfo.tokenType == END) {
       break;
     }
-    printf("%s %s\n", tokenName[tokenInfo.tokenType], tokenInfo.str.c_str());
+    printf("%s\t%s\n", tokenName[tokenInfo.tokenType], tokenInfo.str.c_str());
+  }
+}
+
+/**
+ * @brief 通过调用getAllToken输出所有的词法元素以及行号
+ */
+void getAllTokenTest(Lexer* lexer)
+{
+
+  int size = tokenInfoList.size();
+  for (int i = 0;i < size - 1; i++) {
+    printf("tokenName=%s\ttokenValue=%s\ttokenLine=%d\n", tokenName[tokenInfoList[i]->tokenType], 
+    tokenInfoList[i]->str.c_str(), tokenInfoList[i]->line);
   }
 }

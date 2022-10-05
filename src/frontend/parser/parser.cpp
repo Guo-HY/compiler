@@ -3,7 +3,10 @@
 
 extern char tokenName[][20];
 extern char tokenValue[][20];
+extern SymbolTable* currentSymbolTable;
+extern SymbolTable* funcTable;
 
+/* ------------------ tools function ------------------ */
 TokenInfo* Parser::popToken() 
 {
   if (tokenInfoList[nowTokenListPtr]->tokenType == TokenType::END) {
@@ -17,11 +20,12 @@ TokenInfo* Parser::popToken()
 
 TokenInfo* Parser::peekToken(int num)
 {
-  if (nowTokenListPtr + num >= tokenInfoList.size()) {
+  if (nowTokenListPtr + num >= (int)tokenInfoList.size()) {
     Log("error : peek out of bounds\n");
   }
   return tokenInfoList[nowTokenListPtr + num];
 }
+/* ------------------ tools function ------------------ */
 
 CompUnitNode* Parser::compUnitAnalyse() 
 {
@@ -62,10 +66,10 @@ ConstDeclNode* Parser::constDeclAnalyse()
   ConstDeclNode* node = new ConstDeclNode();
   popToken(); /* eat CONSTTK */
   node->bTypeNode = bTypeAnalyse();
-  node->constDefNodes.push_back(constDefAnalyse());
+  node->constDefNodes.push_back(constDefAnalyse(node->bTypeNode));
   while (peekToken(0)->tokenType == TokenType::COMMA) {
     popToken(); /* eat COMMA */
-    node->constDefNodes.push_back(constDefAnalyse());
+    node->constDefNodes.push_back(constDefAnalyse(node->bTypeNode));
   }
   popToken(); /* eat SEMICN */
   return node;
@@ -78,9 +82,10 @@ BTypeNode* Parser::bTypeAnalyse()
   return node;
 }
 
-ConstDefNode* Parser::constDefAnalyse()
+ConstDefNode* Parser::constDefAnalyse(BTypeNode* bType)
 {
   ConstDefNode* node = new ConstDefNode();
+  node->bTypeNode = bType;
   node->ident = peekToken(0);
   popToken(); /* eat IDENFR */
 
@@ -93,6 +98,10 @@ ConstDefNode* Parser::constDefAnalyse()
   }
   popToken(); /* eat ASSIGN */
   node->constInitValNode = constInitValAnalyse();
+
+  /* insert symbol to currentSymbolTable */
+  currentSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SymbolType::CONST);
+
   return node;
 }
 
@@ -123,18 +132,19 @@ VarDeclNode* Parser::varDeclAnalyse()
 {
   VarDeclNode* node = new VarDeclNode();
   node->bTypeNode = bTypeAnalyse();
-  node->varDefNodes.push_back(varDefAnalyse());
+  node->varDefNodes.push_back(varDefAnalyse(node->bTypeNode));
   while (peekToken(0)->tokenType == TokenType::COMMA) {
     popToken(); /* eat COMMA */
-    node->varDefNodes.push_back(varDefAnalyse());
+    node->varDefNodes.push_back(varDefAnalyse(node->bTypeNode));
   }
   popToken(); /* eat SEMICN */
   return node;
 } 
 
-VarDefNode* Parser::varDefAnalyse()
+VarDefNode* Parser::varDefAnalyse(BTypeNode* bType)
 {
   VarDefNode* node = new VarDefNode();
+  node->bTypeNode = bType;
   node->ident = peekToken(0);
   popToken(); /* eat IDENFR */
   while (peekToken(0)->tokenType == TokenType::LBRACK) {
@@ -147,6 +157,10 @@ VarDefNode* Parser::varDefAnalyse()
     node->hasInitVal = true;
     node->initValNode = initValAnalyse();
   }
+
+  /* insert symbol to currentSymbolTable */
+  currentSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SymbolType::VAR);
+
   return node;
 }
 
@@ -181,12 +195,21 @@ FuncDefNode* Parser::funcDefAnalyse()
   popToken(); /* eat IDENFR */
   popToken(); /* eat LPARENT */
 
+  /* 在解析函数形参前需要新建符号表 */
+  currentSymbolTable = currentSymbolTable->newSon();
+
   if (peekToken(0)->tokenType != TokenType::RPARENT) {
     node->funcFParamsNode = funcFParamsAnalyse();
     node->hasFuncFParams = true;
   }
   popToken(); /* eat RPARENT */
-  node->blockNode = blockAnalyse();
+
+  /* insert symbol to funcTable 需要在解析block前将函数插入函数表 */
+  funcTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SymbolType::FUNC);
+
+  node->blockNode = blockAnalyse(false);
+  /* 由于block中没有回溯符号表，因此这里需要回溯  */
+  currentSymbolTable = currentSymbolTable->findParent();
   return node;
 }
 
@@ -197,7 +220,7 @@ MainFuncDefNode* Parser::mainFuncDefAnalyse()
   popToken(); /* eat MAINTK */
   popToken(); /* eat LPARENT */
   popToken(); /* eat RPARENT */
-  node->blockNode = blockAnalyse();
+  node->blockNode = blockAnalyse(true);
   return node;
 }
 
@@ -237,17 +260,28 @@ FuncFParamNode* Parser::FuncFParamAnalyse()
       popToken(); /* eat RBRACK */
     }
   }
+
+  /* insert symbol to currentSymbolTable */
+  currentSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SymbolType::FUNCFPARAM);
+
   return node;
 }
 
-BlockNode* Parser::blockAnalyse()
+BlockNode* Parser::blockAnalyse(bool newSymbolTable)
 {
+  if (newSymbolTable) {
+    currentSymbolTable = currentSymbolTable->newSon();
+  }
   BlockNode* node = new BlockNode();
   popToken(); /* eat LBRACE */
   while (peekToken(0)->tokenType != TokenType::RBRACE) {
     node->blockItemNodes.push_back(blockItemAnalyse());
   }
   popToken(); /* eat RBRACE */
+
+  if (newSymbolTable) {
+    currentSymbolTable = currentSymbolTable->findParent();
+  }
   return node;
 }
 
@@ -318,7 +352,7 @@ StmtNode* Parser::stmtAnalyse()
     }
   } else if (t == TokenType::LBRACE) {
     node->stmtType = StmtType::STMT_BLOCK;
-    node->blockNode = blockAnalyse();
+    node->blockNode = blockAnalyse(true);
     /* 此时需要解析LVal '=' Exp ';' 或者 [Exp] ';'
         如果当前token是IDENFR并且下一个token不是LPARENT，那么当前元素一定为LVal，
        并且无法判断是LVal '=' Exp ';'还是[Exp] ';'，此时先解析一个LVal，然后判断接下来的token是否为等号，

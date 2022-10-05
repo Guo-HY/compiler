@@ -2,6 +2,7 @@
 #define _PARSER_H 1
 
 #include "syntax_tree.hpp"
+#include "symbol_table.hpp"
 
 extern std::vector<TokenInfo*> tokenInfoList;
 
@@ -31,17 +32,18 @@ class Parser {
   DeclNode* declAnalyse();
   ConstDeclNode* constDeclAnalyse();
   BTypeNode* bTypeAnalyse();
-  ConstDefNode* constDefAnalyse();
+  ConstDefNode* constDefAnalyse(BTypeNode* bType);
   ConstInitValNode* constInitValAnalyse();
   VarDeclNode* varDeclAnalyse();
-  VarDefNode* varDefAnalyse();
+  VarDefNode* varDefAnalyse(BTypeNode* bType);
   InitValNode* initValAnalyse();
   FuncDefNode* funcDefAnalyse();
   MainFuncDefNode* mainFuncDefAnalyse();
   FuncTypeNode* funcTypeAnalyse();
   FuncFParamsNode* funcFParamsAnalyse();
   FuncFParamNode* FuncFParamAnalyse();
-  BlockNode* blockAnalyse();
+  /* newSymbolTable 为真表示需要新建符号表 */
+  BlockNode* blockAnalyse(bool newSymbolTable);
   BlockItemNode* blockItemAnalyse();
   StmtNode* stmtAnalyse();
   ExpNode* expAnalyse(LValNode*);
