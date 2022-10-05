@@ -49,6 +49,7 @@ bool Lexer::getAllToken()
   while(true) {
     TokenInfo* tokenInfo = new TokenInfo();
     r = getToken(tokenInfo);
+    tokenInfo->line = this->line;
     if (r == false) {
       /* lexer has someting error */
       return false;

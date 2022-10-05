@@ -51,6 +51,7 @@ struct TokenInfo {
   TokenType tokenType;
   std::string str;
   int value;
+  int line;
 };
 
 class Lexer {
