@@ -169,7 +169,7 @@ InitValNode* Parser::initValAnalyse()
     return node;
   }
   node->initArray = false;
-  node->expNode = expAnalyse();
+  node->expNode = expAnalyse(NULL);
   return node;
 }
 
@@ -278,7 +278,7 @@ StmtNode* Parser::stmtAnalyse()
     popToken(); /* eat STRCON */
     while (peekToken(0)->tokenType == TokenType::COMMA) {
       popToken(); /* eat COMMA */
-      node->expNodes.push_back(expAnalyse());
+      node->expNodes.push_back(expAnalyse(NULL));
     }
     popToken(); /* eat RPARENT */
     popToken(); /* eat SEMICN */
@@ -286,7 +286,7 @@ StmtNode* Parser::stmtAnalyse()
     node->stmtType = StmtType::STMT_RETURN;
     popToken(); /* eat RETURNTK */
     if (peekToken(0)->tokenType != TokenType::SEMICN) {
-      node->expNodes.push_back(expAnalyse());
+      node->expNodes.push_back(expAnalyse(NULL));
     }
     popToken(); /* eat SEMICN */
   } else if (t == TokenType::BREAKTK) {
@@ -319,27 +319,64 @@ StmtNode* Parser::stmtAnalyse()
   } else if (t == TokenType::LBRACE) {
     node->stmtType = StmtType::STMT_BLOCK;
     node->blockNode = blockAnalyse();
-  } else if (isAssign()) {
-    node->stmtType = StmtType::STMT_ASSIGN;
-    node->lValNode = lValAnalyse();
-    popToken(); /* eat ASSIGN */
-    if (peekToken(0)->tokenType == TokenType::GETINTTK) {
-      node->stmtType = StmtType::STMT_GETINT;
-      popToken(); /* eat GETINTTK */
-      popToken(); /* eat LPARENT */
-      popToken(); /* eat RPARENT */
+    /* 此时需要解析LVal '=' Exp ';' 或者 [Exp] ';'
+        如果当前token是IDENFR并且下一个token不是LPARENT，那么当前元素一定为LVal，
+       并且无法判断是LVal '=' Exp ';'还是[Exp] ';'，此时先解析一个LVal，然后判断接下来的token是否为等号，
+       如果是等号就解析LVal '=' Exp ';'，否则解析[Exp] ';'
+        否则就一定是[Exp] ';'
+    */
+  } else if (peekToken(0)->tokenType == TokenType::IDENFR && 
+             peekToken(1)->tokenType != TokenType::LPARENT) {
+    LValNode* lValNodeTmp = lValAnalyse();
+    if (peekToken(0)->tokenType == TokenType::ASSIGN) { /* LVal '=' Exp ';' */
+      node->stmtType = StmtType::STMT_ASSIGN;
+      node->lValNode = lValNodeTmp;
+      popToken(); /* eat ASSIGN */
+      if (peekToken(0)->tokenType == TokenType::GETINTTK) { /* LVal '=' 'getint' '(' ')' ';' */
+        node->stmtType = StmtType::STMT_GETINT;
+        popToken(); /* eat GETINTTK */
+        popToken(); /* eat LPARENT */
+        popToken(); /* eat RPARENT */
+        popToken(); /* eat SEMICN */
+        return node;
+      }
+      node->expNodes.push_back(expAnalyse(NULL));
       popToken(); /* eat SEMICN */
-      return node;
+    } else { /* [Exp] ';' */
+      node->stmtType = StmtType::STMT_EXP;
+      node->expNodes.push_back(expAnalyse(lValNodeTmp));// 此处传入已经分析好的lval
+      popToken(); /* eat SEMICN */
     }
-    node->expNodes.push_back(expAnalyse());
-    popToken(); /* eat SEMICN */
   } else {
+    /* 此时一定为[Exp] ';' */
     node->stmtType = StmtType::STMT_EXP;
     if (peekToken(0)->tokenType != TokenType::SEMICN) {
-      node->expNodes.push_back(expAnalyse());
+      node->expNodes.push_back(expAnalyse(NULL));
     }
     popToken(); /* eat SEMICN */
   }
+
+  // else if (isAssign()) {
+  //   node->stmtType = StmtType::STMT_ASSIGN;
+  //   node->lValNode = lValAnalyse();
+  //   popToken(); /* eat ASSIGN */
+  //   if (peekToken(0)->tokenType == TokenType::GETINTTK) {
+  //     node->stmtType = StmtType::STMT_GETINT;
+  //     popToken(); /* eat GETINTTK */
+  //     popToken(); /* eat LPARENT */
+  //     popToken(); /* eat RPARENT */
+  //     popToken(); /* eat SEMICN */
+  //     return node;
+  //   }
+  //   node->expNodes.push_back(expAnalyse());
+  //   popToken(); /* eat SEMICN */
+  // } else {
+  //   node->stmtType = StmtType::STMT_EXP;
+  //   if (peekToken(0)->tokenType != TokenType::SEMICN) {
+  //     node->expNodes.push_back(expAnalyse());
+  //   }
+  //   popToken(); /* eat SEMICN */
+  // }
   return node;
 }
 
@@ -355,10 +392,10 @@ bool Parser::isAssign()
   }
 }
 
-ExpNode* Parser::expAnalyse()
+ExpNode* Parser::expAnalyse(LValNode* lval)
 {
   ExpNode* node = new ExpNode();
-  node->addExpNode = addExpAnalyse();
+  node->addExpNode = addExpAnalyse(lval);
   return node;
 }
 
@@ -376,22 +413,28 @@ LValNode* Parser::lValAnalyse()
   popToken(); /* eat IDENFR */
   while (peekToken(0)->tokenType == TokenType::LBRACK) {
     popToken(); /* eat LBRACK */
-    node->expNodes.push_back(expAnalyse());
+    node->expNodes.push_back(expAnalyse(NULL));
     popToken(); /* eat RBRACK */
   }
   return node;
 }
 
-PrimaryExpNode* Parser::primaryExpAnalyse()
+PrimaryExpNode* Parser::primaryExpAnalyse(LValNode* lval)
 {   
   PrimaryExpNode* node = new PrimaryExpNode();
+  if (lval != NULL) {
+    node->primaryExpType = PrimaryExpType::PRIMARY_LVAL;
+    node->lValNode = lval;
+    return node;
+  }
+
   TokenType t = peekToken(0)->tokenType;
   switch (t)
   {
   case TokenType::LPARENT:
     node->primaryExpType = PrimaryExpType::PRIMARY_EXP;
     popToken(); /* eat LPARENT */
-    node->expNode = expAnalyse();
+    node->expNode = expAnalyse(NULL);
     popToken(); /* eat RPARENT */
     break;
   case TokenType::IDENFR:
@@ -417,15 +460,20 @@ NumberNode* Parser::numberAnalyse()
   return node;
 }
 
-UnaryExpNode* Parser::unaryExpAnalyse()
+UnaryExpNode* Parser::unaryExpAnalyse(LValNode* lval)
 {
   UnaryExpNode* node = new UnaryExpNode();
+  if (lval != NULL) {
+    node->unaryExpType = UnaryExpType::UNARY_PRIMARYEXP;
+    node->primaryExpNode = primaryExpAnalyse(lval);
+    return node;
+  }
   if (peekToken(0)->tokenType == TokenType::PLUS || 
   peekToken(0)->tokenType == TokenType::MINU ||
   peekToken(0)->tokenType == TokenType::NOT) {
     node->unaryExpType = UnaryExpType::UNARY_PREFIX;
     node->unaryOpNode = unaryOpAnalyse();
-    node->unaryExpNode = unaryExpAnalyse();
+    node->unaryExpNode = unaryExpAnalyse(NULL);
   } else if (peekToken(0)->tokenType == TokenType::IDENFR && 
   peekToken(1)->tokenType == TokenType::LPARENT) {
     node->unaryExpType = UnaryExpType::UNARY_FUNCCALL;
@@ -439,7 +487,7 @@ UnaryExpNode* Parser::unaryExpAnalyse()
     popToken();/* eat RPARENT */
   } else {
     node->unaryExpType = UnaryExpType::UNARY_PRIMARYEXP;
-    node->primaryExpNode = primaryExpAnalyse();
+    node->primaryExpNode = primaryExpAnalyse(NULL);
   }
   return node;
 }
@@ -455,37 +503,37 @@ UnaryOpNode* Parser::unaryOpAnalyse()
 FuncRParamsNode* Parser::funcRParamsAnalyse()
 {
   FuncRParamsNode* node = new FuncRParamsNode();
-  node->expNodes.push_back(expAnalyse());
+  node->expNodes.push_back(expAnalyse(NULL));
   while (peekToken(0)->tokenType == TokenType::COMMA) {
     popToken(); /* eat COMMA */
-    node->expNodes.push_back(expAnalyse());
+    node->expNodes.push_back(expAnalyse(NULL));
   }
   return node;
 }
 
-MulExpNode* Parser::mulExpAnalyse()
+MulExpNode* Parser::mulExpAnalyse(LValNode* lval)
 {
   MulExpNode* node = new MulExpNode();
-  node->unaryExpNodes.push_back(unaryExpAnalyse());
+  node->unaryExpNodes.push_back(unaryExpAnalyse(lval));
   while (peekToken(0)->tokenType == TokenType::MULT ||
   peekToken(0)->tokenType == TokenType::DIV ||
   peekToken(0)->tokenType == TokenType::MOD) {
     node->ops.push_back(peekToken(0));
     popToken(); /* eat MULT | DIV | MID */
-    node->unaryExpNodes.push_back(unaryExpAnalyse());
+    node->unaryExpNodes.push_back(unaryExpAnalyse(NULL));
   }
   return node;
 }
 
-AddExpNode* Parser::addExpAnalyse()
+AddExpNode* Parser::addExpAnalyse(LValNode* lval)
 {
   AddExpNode* node = new AddExpNode();
-  node->MulExpNodes.push_back(mulExpAnalyse());
+  node->MulExpNodes.push_back(mulExpAnalyse(lval));
   while (peekToken(0)->tokenType == TokenType::PLUS ||
   peekToken(0)->tokenType == TokenType::MINU) {
     node->ops.push_back(peekToken(0));
     popToken(); /* eat PLUS | MINU */
-    node->MulExpNodes.push_back(mulExpAnalyse());
+    node->MulExpNodes.push_back(mulExpAnalyse(NULL));
   }
   return node;
 }
@@ -493,14 +541,14 @@ AddExpNode* Parser::addExpAnalyse()
 RelExpNode* Parser::relExpAnalyse()
 {
   RelExpNode* node = new RelExpNode();
-  node->addExpNodes.push_back(addExpAnalyse());
+  node->addExpNodes.push_back(addExpAnalyse(NULL));
   while (peekToken(0)->tokenType == TokenType::LSS || 
   peekToken(0)->tokenType == TokenType::GRE ||
   peekToken(0)->tokenType == TokenType::LEQ ||
   peekToken(0)->tokenType == TokenType::GEQ) {
     node->ops.push_back(peekToken(0));
     popToken(); /* eat LSS | GRE | LEQ | GEQ */
-    node->addExpNodes.push_back(addExpAnalyse());
+    node->addExpNodes.push_back(addExpAnalyse(NULL));
   }
   return node;
 }
@@ -545,7 +593,7 @@ LOrExpNode* Parser::lOrExpAnalyse()
 ConstExpNode* Parser::constExpAnalyse()
 {
   ConstExpNode* node = new ConstExpNode();
-  node->addExpNode = addExpAnalyse();
+  node->addExpNode = addExpAnalyse(NULL);
   return node;
 }
 
