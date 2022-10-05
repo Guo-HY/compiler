@@ -78,7 +78,7 @@ PrimaryExp ::=  '(' Exp ')'
 Number ::= IntConst
 
 UnaryExp ::=  PrimaryExp // FIRST = LPARENT | IDENFR | INTCON
-            | Ident '(' [FuncRParams] ')' // FIRST = IDENT
+            | Ident '(' [FuncRParams] ')' // FIRST = IDENFR
             | UnaryOp UnaryExp  // FIRST = PLUS | MINU | NOT
 
 UnaryOp ::= '+' | '-' | '!'
