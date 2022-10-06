@@ -46,4 +46,10 @@
 
 #define TODO() panic("please implement me")
 
+#define tprintf(tabNum, ...) \
+  do {  \
+    printf("%*s", tabNum, ""); \
+    printf(__VA_ARGS__); \
+  } while (0)
+
 #endif

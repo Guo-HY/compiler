@@ -23,10 +23,10 @@ class SymbolTable {
 
   SymbolTable* parent;
   std::unordered_map<std::string, SymbolItem*> symbols;
-  std::pair<int, int> tableId; /* first为层数，second为该层顺序解析到的第几个table */
-  // std::vector<SymbolTable*> childs;
+  int tableId;
+  std::vector<SymbolTable*> childs;
   public:
-  SymbolTable(std::pair<int, int> id) : parent(NULL), tableId(id) {}
+  SymbolTable(int id) : parent(NULL), tableId(id) {}
 
   bool insertSymbol(std::string* symbolName, SymbolItem* symbolItem);
 
@@ -38,17 +38,16 @@ class SymbolTable {
 
   void insertNode(std::string* symbolName, SyntaxNode* node, SymbolType type);
 
-  void toString();
+  void toString(int tabRet);
 
-  int getFirstId() { return tableId.first; }
-  int getSecondId() { return tableId.second; }
+  int getTableId() { return this->tableId; }
 
 };
 
 class SymbolItem {
   public:
   SymbolType symbolType;
-  SyntaxNode* defNode;
+  SyntaxNode* defNode;    /* defNode只可能是SymbolType定义的几种类型之一 */
   // VarDefNode* varDef;
   // ConstDefNode* constDef;
   // FuncDefNode* funcDef;

@@ -42,8 +42,9 @@ int main(int argc, char **argv)
   Parser parser;
   parser.toString();
 
-  // discard = freopen("table.txt", "w", stdout);
-  // allSymbolTableToString();
+  discard = freopen("table.txt", "w", stdout);
+  funcTable->toString(0);
+  currentSymbolTable->toString(0);
 
   return 0;
 }

@@ -1,14 +1,15 @@
 #include "symbol_table.hpp"
 #include <map>
-/* 当前符号表，需要在递归下降前手动分配 */
+#define TAB_LINE 2
+
+/* 当前符号表 */
 SymbolTable* currentSymbolTable;
+/* 全局函数表 */
 SymbolTable* funcTable;
 
-int currentTableFirstId;
-int currentTableSecondId;
-int lastTableFirstId;
+int currentTableId;
 
-std::map<std::pair<int, int>, SymbolTable*> allSymbolTable;
+std::map<int, SymbolTable*> allSymbolTable;
 
 char symbolTypeName[][20] {
   "NONE",
@@ -41,24 +42,16 @@ SymbolItem* SymbolTable::findSymbol(std::string* symbolName)
 
 SymbolTable* SymbolTable::newSon()
 {
-  currentTableFirstId++;
-  // if (currentTableFirstId == lastTableFirstId) {
-    currentTableSecondId++;
-  // } else {
-    // currentTableSecondId = 0;
-  // }
-  SymbolTable* table = new SymbolTable({currentTableFirstId, currentTableSecondId});
+  currentTableId++;
+  SymbolTable* table = new SymbolTable(currentTableId);
   table->parent = this;
-  // Log("currentTableFirstId = %d, currentTableSecondId = %d\n", currentTableFirstId, currentTableSecondId);
-  allSymbolTable[{currentTableFirstId, currentTableSecondId}] = table;
+  this->childs.push_back(table);
+  allSymbolTable[currentTableId] = table;
   return table;
 }
 
 SymbolTable* SymbolTable::findParent()
 { 
-  // lastTableFirstId = currentTableFirstId;
-  // currentTableFirstId = this->parent->getFirstId();
-  // currentTableSecondId = this->parent->getSecondId();
   return this->parent;
 }
 
@@ -69,41 +62,42 @@ void SymbolTable::insertNode(std::string* symbolName, SyntaxNode* node, SymbolTy
   /* need error handle */
 }
 
-void SymbolTable::toString()
+void SymbolTable::toString(int tabNum)
 {
-  printf("----------------------------\n");
-  printf("symbol table id = %d\t%d\n", this->tableId.first, this->tableId.second);
+  tprintf(tabNum,"############################\n");
+  tprintf(tabNum, "symbol table id = %d\n", this->tableId);
   if (this->parent != NULL) {
-    printf("symbol table parent id = %d\t%d\n", this->parent->tableId.first, this->parent->tableId.second);
+    tprintf(tabNum, "symbol table parent id = %d\n", this->parent->tableId);
   } else {
-    printf("this is top table\n");
+    tprintf(tabNum, "this is top table\n");
   }
+  tprintf(tabNum, "----------------------------\n");
   std::unordered_map<std::string, SymbolItem*>::iterator iter;
   for (iter = this->symbols.begin(); iter != this->symbols.end(); iter++) {
-    printf("symbol name=%s\tsymbol type=%s\n", iter->first.c_str(), symbolTypeName[iter->second->symbolType]);
+    tprintf(tabNum, "symbol name=%s\tsymbol type=%s\n", iter->first.c_str(), symbolTypeName[iter->second->symbolType]);
   }
-  printf("----------------------------\n");
+  tprintf(tabNum,"############################\n");
+  for (int i = 0; i < this->childs.size(); i++) {
+    this->childs[i]->toString(tabNum + 1 * TAB_LINE);
+  }
 }
 
 void symbolTableInit()
 {
-  currentSymbolTable = new SymbolTable({0, 1});
-  funcTable = new SymbolTable({0, 0});
-  allSymbolTable[{0, 0}] = funcTable;
-  allSymbolTable[{0, 1}] = currentSymbolTable;
-  currentTableFirstId = 0;
-  currentTableSecondId = 1;
-  lastTableFirstId = 0;
-
+  currentSymbolTable = new SymbolTable(1);
+  funcTable = new SymbolTable(0);
+  allSymbolTable[0] = funcTable;
+  allSymbolTable[1] = currentSymbolTable;
+  currentTableId = 1;
+  /* 初始化时将main函数加入函数表 */
   funcTable->insertSymbol(new std::string("main"), new SymbolItem(NULL, SymbolType::FUNC));
-
 }
 
 void allSymbolTableToString()
 {
-  Log("we have %d tables\n", (int)allSymbolTable.size());
-  std::map<std::pair<int, int>, SymbolTable*>::iterator iter;
+  printf("we have %d tables\n", (int)allSymbolTable.size());
+  std::map<int, SymbolTable*>::iterator iter;
   for (iter = allSymbolTable.begin(); iter != allSymbolTable.end(); iter++) {
-    iter->second->toString();
+    iter->second->toString(0);
   }
 }
