@@ -1,7 +1,9 @@
 #include <stdio.h>
+
 #include "frontend/lexer/lexer.hpp"
 #include "frontend/parser/parser.hpp"
 #include "frontend/parser/symbol_table.hpp"
+#include "utils/error_handle.hpp"
 #include <error.hpp>
 
 extern char tokenName[][20];
@@ -17,34 +19,26 @@ extern void allSymbolTableToString();
 int main(int argc, char **argv)
 {
   FILE* fp = fopen("testfile.txt", "r");
-  FILE* discard;
+  freopen("output.txt", "w", stdout);
   bool ret;
-  
-  discard = freopen("output.txt", "w", stdout);
   if (fp == NULL) {
     panic("can't open source file");
   }
 
   symbolTableInit();
-
-  Lexer lexer(fp);
-  
-  // getTokenTest(&lexer);
-
-  ret = lexer.getAllToken();
-
+  Lexer*lexer = new Lexer(fp);
+  ret = lexer->getAllToken();
   if (ret == false) {
     Log("lexer has something error\n");
     exit(1);
   }
-  // getAllTokenTest(&lexer);
+  ErrorList* errorList = new ErrorList();
+  Parser* parser = new Parser(errorList);
+  parser->toString();
 
-  Parser parser;
-  parser.toString();
-
-  discard = freopen("table.txt", "w", stdout);
-  funcTable->toString(0);
-  currentSymbolTable->toString(0);
+  // freopen("table.txt", "w", stdout);
+  // funcTable->toString(0);
+  // currentSymbolTable->toString(0);
 
   return 0;
 }

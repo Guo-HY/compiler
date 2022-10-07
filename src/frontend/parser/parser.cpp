@@ -20,12 +20,41 @@ TokenInfo* Parser::popToken()
 
 TokenInfo* Parser::peekToken(int num)
 {
-  if (nowTokenListPtr + num >= (int)tokenInfoList.size()) {
+  if (nowTokenListPtr + num >= (int)tokenInfoList.size() ||
+      nowTokenListPtr + num < 0) {
     Log("error : peek out of bounds\n");
   }
   return tokenInfoList[nowTokenListPtr + num];
 }
 /* ------------------ tools function ------------------ */
+/* ------------------ error handle ------------------ */
+bool Parser::tokenLackHandler(TokenType tokenType)
+{
+  if (peekToken(0)->tokenType != tokenType) {
+    ErrorInfo* errorInfo = new ErrorInfo();
+    errorInfo->line = peekToken(-1)->line;
+    switch (tokenType)
+    {
+    case TokenType::SEMICN:
+      errorInfo->errorType = 'i';
+      break;
+    case TokenType::RPARENT:
+      errorInfo->errorType = 'j';
+      break;
+    case TokenType::RBRACK:
+      errorInfo->errorType = 'k';
+      break;
+    default:
+      errorInfo->errorType = '#';
+      break;
+    }
+    this->errorList->addErrorInfo(errorInfo);
+    return true;
+  }
+  popToken();
+  return false;
+}
+/* ------------------ error handle ------------------ */
 
 CompUnitNode* Parser::compUnitAnalyse() 
 {
@@ -71,7 +100,8 @@ ConstDeclNode* Parser::constDeclAnalyse()
     popToken(); /* eat COMMA */
     node->constDefNodes.push_back(constDefAnalyse(node->bTypeNode));
   }
-  popToken(); /* eat SEMICN */
+  /* check if lack SEMICN ,if not lack then eat */
+  tokenLackHandler(TokenType::SEMICN);
   return node;
 }
 
@@ -94,7 +124,8 @@ ConstDefNode* Parser::constDefAnalyse(BTypeNode* bType)
     popToken(); /* eat LBRACK */
     (node->arrayDimension)++;
     node->constExpNodes.push_back(constExpAnalyse());
-    popToken(); /* eat RBRACK */
+    /* check if lack RBRACK if not lack then eat */
+    tokenLackHandler(TokenType::RBRACK);
   }
   popToken(); /* eat ASSIGN */
   node->constInitValNode = constInitValAnalyse();
@@ -137,7 +168,8 @@ VarDeclNode* Parser::varDeclAnalyse()
     popToken(); /* eat COMMA */
     node->varDefNodes.push_back(varDefAnalyse(node->bTypeNode));
   }
-  popToken(); /* eat SEMICN */
+  /* check if lack SEMICN ,if not lack then eat */
+  tokenLackHandler(TokenType::SEMICN);
   return node;
 } 
 
@@ -150,7 +182,8 @@ VarDefNode* Parser::varDefAnalyse(BTypeNode* bType)
   while (peekToken(0)->tokenType == TokenType::LBRACK) {
     popToken(); /* eat LBRACK */
     node->constExpNodes.push_back(constExpAnalyse());
-    popToken(); /* eat RBRACK */
+    /* check if lack RBRACK ,if not lack then eat */
+    tokenLackHandler(TokenType::RBRACK);
   } 
   if (peekToken(0)->tokenType == TokenType::ASSIGN) {
     popToken(); /* eat ASSIGN */
@@ -202,8 +235,8 @@ FuncDefNode* Parser::funcDefAnalyse()
     node->funcFParamsNode = funcFParamsAnalyse();
     node->hasFuncFParams = true;
   }
-  popToken(); /* eat RPARENT */
-
+  /* check if lack RPARENT ,if not lack then eat */
+  tokenLackHandler(TokenType::RPARENT);
   /* insert symbol to funcTable 需要在解析block前将函数插入函数表 */
   funcTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SymbolType::FUNC);
 
@@ -219,7 +252,8 @@ MainFuncDefNode* Parser::mainFuncDefAnalyse()
   popToken(); /* eat INTTK */
   popToken(); /* eat MAINTK */
   popToken(); /* eat LPARENT */
-  popToken(); /* eat RPARENT */
+  /* check if lack RPARENT ,if not lack then eat */
+  tokenLackHandler(TokenType::RPARENT);
   node->blockNode = blockAnalyse(true);
   return node;
 }
@@ -251,13 +285,15 @@ FuncFParamNode* Parser::FuncFParamAnalyse()
   popToken(); /* eat IDENFR */
   if (peekToken(0)->tokenType == TokenType::LBRACK) {
     popToken(); /* eat LBRACK */
-    popToken(); /* eat RBRACK */
+    /* check if lack RBRACK ,if not lack then eat */
+    tokenLackHandler(TokenType::RBRACK);
     node->arrayDimension = 1;
     while (peekToken(0)->tokenType == TokenType::LBRACK) {
       popToken(); /* eat LBRACK */
       node->arrayDimension++;
       node->constExpNodes.push_back(constExpAnalyse());
-      popToken(); /* eat RBRACK */
+      /* check if lack RBRACK ,if not lack then eat */
+      tokenLackHandler(TokenType::RBRACK);
     }
   }
 
@@ -314,15 +350,18 @@ StmtNode* Parser::stmtAnalyse()
       popToken(); /* eat COMMA */
       node->expNodes.push_back(expAnalyse(NULL));
     }
-    popToken(); /* eat RPARENT */
-    popToken(); /* eat SEMICN */
+    /* check if lack RPARENT if not lack then eat */
+    tokenLackHandler(TokenType::RPARENT);
+    /* check if lack SEMICN if not lack then eat */
+    tokenLackHandler(TokenType::SEMICN);
   } else if (t == TokenType::RETURNTK) { 
     node->stmtType = StmtType::STMT_RETURN;
     popToken(); /* eat RETURNTK */
     if (peekToken(0)->tokenType != TokenType::SEMICN) {
       node->expNodes.push_back(expAnalyse(NULL));
     }
-    popToken(); /* eat SEMICN */
+    /* check if lack SEMICN ,if not lack then eat */
+    tokenLackHandler(TokenType::SEMICN);
   } else if (t == TokenType::BREAKTK) {
     node->stmtType = StmtType::STMT_BREAK;
     popToken(); /* eat BREAKTK */
@@ -336,14 +375,16 @@ StmtNode* Parser::stmtAnalyse()
     popToken(); /* eat WHILETK */
     popToken(); /* eat LPARENT */
     node->condNode = condAnalyse();
-    popToken(); /* eat RPARENT */
+    /* check if lack RPARENT ,if not lack then eat */
+    tokenLackHandler(TokenType::RPARENT);
     node->stmtNodes.push_back(stmtAnalyse());
   } else if (t == TokenType::IFTK) {
     node->stmtType = StmtType::STMT_IF;
     popToken(); /* eat IFTK */
     popToken(); /* eat LPARENT */
     node->condNode = condAnalyse();
-    popToken(); /* eat RPARENT */
+    /* check if lack RPARENT ,if not lack then eat */
+    tokenLackHandler(TokenType::RPARENT);
     node->stmtNodes.push_back(stmtAnalyse());
     if (peekToken(0)->tokenType == TokenType::ELSETK) {
       popToken(); /* eat ELSETK */
@@ -370,16 +411,20 @@ StmtNode* Parser::stmtAnalyse()
         node->stmtType = StmtType::STMT_GETINT;
         popToken(); /* eat GETINTTK */
         popToken(); /* eat LPARENT */
-        popToken(); /* eat RPARENT */
-        popToken(); /* eat SEMICN */
+        /* check if lack RPARENT ,if not lack then eat */
+        tokenLackHandler(TokenType::RPARENT);
+        /* check if lack SEMICN , if not lack then eat */
+        tokenLackHandler(TokenType::SEMICN);
         return node;
       }
       node->expNodes.push_back(expAnalyse(NULL));
-      popToken(); /* eat SEMICN */
+      /* check if lack SEMICN ,if not lack then eat */
+      tokenLackHandler(TokenType::SEMICN);
     } else { /* [Exp] ';' */
       node->stmtType = StmtType::STMT_EXP;
       node->expNodes.push_back(expAnalyse(lValNodeTmp));// 此处传入已经分析好的lval
-      popToken(); /* eat SEMICN */
+      /* check if lack SEMICN ,if not lack then eat */
+      tokenLackHandler(TokenType::SEMICN);
     }
   } else {
     /* 此时一定为[Exp] ';' */
@@ -387,7 +432,8 @@ StmtNode* Parser::stmtAnalyse()
     if (peekToken(0)->tokenType != TokenType::SEMICN) {
       node->expNodes.push_back(expAnalyse(NULL));
     }
-    popToken(); /* eat SEMICN */
+    /* check if lack SEMICN ,if not lack then eat */
+    tokenLackHandler(TokenType::SEMICN);
   }
 
   // else if (isAssign()) {
@@ -448,7 +494,8 @@ LValNode* Parser::lValAnalyse()
   while (peekToken(0)->tokenType == TokenType::LBRACK) {
     popToken(); /* eat LBRACK */
     node->expNodes.push_back(expAnalyse(NULL));
-    popToken(); /* eat RBRACK */
+    /* check if lack RBRACK ,if not lack then eat */
+    tokenLackHandler(TokenType::RBRACK);
   }
   return node;
 }
@@ -469,7 +516,8 @@ PrimaryExpNode* Parser::primaryExpAnalyse(LValNode* lval)
     node->primaryExpType = PrimaryExpType::PRIMARY_EXP;
     popToken(); /* eat LPARENT */
     node->expNode = expAnalyse(NULL);
-    popToken(); /* eat RPARENT */
+    /* check if lack RPARENT ,if not lack then eat */
+    tokenLackHandler(TokenType::RPARENT);
     break;
   case TokenType::IDENFR:
     node->primaryExpType = PrimaryExpType::PRIMARY_LVAL;
@@ -518,7 +566,8 @@ UnaryExpNode* Parser::unaryExpAnalyse(LValNode* lval)
       node->hasFuncRParams = true;
       node->funcRParamsNode = funcRParamsAnalyse();
     }
-    popToken();/* eat RPARENT */
+    /* check if lack RPARENT ,if not lack then eat */
+    tokenLackHandler(TokenType::RPARENT);
   } else {
     node->unaryExpType = UnaryExpType::UNARY_PRIMARYEXP;
     node->primaryExpNode = primaryExpAnalyse(NULL);

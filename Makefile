@@ -26,6 +26,7 @@ clean:
 	rm -rf $(OBJ_DIR)
 	rm -f output.txt
 	rm -f token.txt
+	rm -f table.txt
 
 run: gsc
 	./gsc

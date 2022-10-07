@@ -3,14 +3,15 @@
 
 #include "syntax_tree.hpp"
 #include "symbol_table.hpp"
-
+#include "../../utils/error_handle.hpp"
 extern std::vector<TokenInfo*> tokenInfoList;
 
 class Parser {
   public:
-  Parser() {
+  Parser(ErrorList* list) {
     this->nowTokenListPtr = 0;
     this->root = NULL;
+    this->errorList = list;
   }
 
   SyntaxNode* syntaxAnalyse();
@@ -21,9 +22,11 @@ class Parser {
   CompUnitNode* root;
   /* 当前关注的token指针，处理完一个语法元素后，指针永远指向下一个 */
   int nowTokenListPtr;
+  /* 错误列表指针 */
+  ErrorList* errorList;
   /* pop 会返回当前token的指针并将nowTokenListPtr加一 */
   TokenInfo* popToken();
-  /* peek 会返回当前位置+num处的token，但不会改变nowTokenListPtr */
+    /* peek 会返回当前位置+num处的token，但不会改变nowTokenListPtr */
   TokenInfo* peekToken(int num);
   /* 从当前位置向后找，判断先遇到分号还是赋值等号，若先是等号则返回true  */
   bool isAssign();
@@ -61,6 +64,8 @@ class Parser {
   LAndExpNode* lAndExpAnalyse();
   LOrExpNode* lOrExpAnalyse();
   ConstExpNode* constExpAnalyse();
+
+  bool tokenLackHandler(TokenType tokenType);
 
 };
 
