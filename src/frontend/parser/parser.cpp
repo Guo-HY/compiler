@@ -231,7 +231,7 @@ FuncDefNode* Parser::funcDefAnalyse()
   /* 在解析函数形参前需要新建符号表 */
   currentSymbolTable = currentSymbolTable->newSon();
 
-  if (peekToken(0)->tokenType != TokenType::RPARENT) {
+  if (peekToken(0)->tokenType == TokenType::INTTK) {
     node->funcFParamsNode = funcFParamsAnalyse();
     node->hasFuncFParams = true;
   }
@@ -335,6 +335,17 @@ BlockItemNode* Parser::blockItemAnalyse()
   return node;
 }
 
+bool Parser::isExpFirst() 
+{
+  TokenType type = peekToken(0)->tokenType;
+  if (type == TokenType::LPARENT || type == TokenType::IDENFR ||
+      type == TokenType::INTCON || type == TokenType::PLUS ||
+      type == TokenType::MINU || type == TokenType::NOT) {
+    return true;
+  }
+  return false;
+}
+
 StmtNode* Parser::stmtAnalyse()
 {
   StmtNode* node = new StmtNode();
@@ -357,7 +368,7 @@ StmtNode* Parser::stmtAnalyse()
   } else if (t == TokenType::RETURNTK) { 
     node->stmtType = StmtType::STMT_RETURN;
     popToken(); /* eat RETURNTK */
-    if (peekToken(0)->tokenType != TokenType::SEMICN) {
+    if (isExpFirst()) {
       node->expNodes.push_back(expAnalyse(NULL));
     }
     /* check if lack SEMICN ,if not lack then eat */
@@ -365,11 +376,13 @@ StmtNode* Parser::stmtAnalyse()
   } else if (t == TokenType::BREAKTK) {
     node->stmtType = StmtType::STMT_BREAK;
     popToken(); /* eat BREAKTK */
-    popToken(); /* eat SEMICON */
+    /* check if lack SEMICN ,if not lack then eat */
+    tokenLackHandler(TokenType::SEMICN);
   } else if (t == TokenType::CONTINUETK) {
     node->stmtType = StmtType::STMT_CONTINUE;
     popToken(); /* eat CONTINUETK */
-    popToken(); /* eat SEMICON */
+    /* check if lack SEMICN ,if not lack then eat */
+    tokenLackHandler(TokenType::SEMICN);
   } else if (t == TokenType::WHILETK) {
     node->stmtType = StmtType::STMT_WHILE;
     popToken(); /* eat WHILETK */
@@ -394,6 +407,7 @@ StmtNode* Parser::stmtAnalyse()
   } else if (t == TokenType::LBRACE) {
     node->stmtType = StmtType::STMT_BLOCK;
     node->blockNode = blockAnalyse(true);
+
     /* 此时需要解析LVal '=' Exp ';' 或者 [Exp] ';'
         如果当前token是IDENFR并且下一个token不是LPARENT，那么当前元素一定为LVal，
        并且无法判断是LVal '=' Exp ';'还是[Exp] ';'，此时先解析一个LVal，然后判断接下来的token是否为等号，
@@ -429,47 +443,14 @@ StmtNode* Parser::stmtAnalyse()
   } else {
     /* 此时一定为[Exp] ';' */
     node->stmtType = StmtType::STMT_EXP;
-    if (peekToken(0)->tokenType != TokenType::SEMICN) {
+    if (isExpFirst()) {
       node->expNodes.push_back(expAnalyse(NULL));
     }
     /* check if lack SEMICN ,if not lack then eat */
     tokenLackHandler(TokenType::SEMICN);
   }
 
-  // else if (isAssign()) {
-  //   node->stmtType = StmtType::STMT_ASSIGN;
-  //   node->lValNode = lValAnalyse();
-  //   popToken(); /* eat ASSIGN */
-  //   if (peekToken(0)->tokenType == TokenType::GETINTTK) {
-  //     node->stmtType = StmtType::STMT_GETINT;
-  //     popToken(); /* eat GETINTTK */
-  //     popToken(); /* eat LPARENT */
-  //     popToken(); /* eat RPARENT */
-  //     popToken(); /* eat SEMICN */
-  //     return node;
-  //   }
-  //   node->expNodes.push_back(expAnalyse());
-  //   popToken(); /* eat SEMICN */
-  // } else {
-  //   node->stmtType = StmtType::STMT_EXP;
-  //   if (peekToken(0)->tokenType != TokenType::SEMICN) {
-  //     node->expNodes.push_back(expAnalyse());
-  //   }
-  //   popToken(); /* eat SEMICN */
-  // }
   return node;
-}
-
-bool Parser::isAssign()
-{
-  for (int i = 0;;i++) {
-    if (peekToken(i)->tokenType == TokenType::ASSIGN) {
-      return true;
-    }
-    if (peekToken(i)->tokenType == TokenType::SEMICN) {
-      return false;
-    }
-  }
 }
 
 ExpNode* Parser::expAnalyse(LValNode* lval)

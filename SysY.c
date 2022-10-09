@@ -42,7 +42,7 @@ MainFuncDef ::= 'int' 'main' '(' ')' Block
 FuncType ::=  'void' 
             | 'int'
 
-FuncFParams ::= FuncFParam { ',' FuncFParam }
+FuncFParams ::= FuncFParam { ',' FuncFParam } // FIRST = INTTK
 
 FuncFParam ::= BType Ident [ '[' ']' { '[' ConstExp ']' } ] 
 // 可以根据[判断是否有可选项
@@ -65,7 +65,7 @@ Stmt ::=  LVal '=' Exp ';' // FIRST = IDENFR
         | LVal '=' 'getint' '(' ')' ';'
         | 'printf' '(' FormatString{ ',' Exp} ')' ';'
 
-Exp ::= AddExp
+Exp ::= AddExp // FIRST = LPARENT | IDENFR | INTCON | PLUS | MINU | NOT
 
 Cond ::= LOrExp
 

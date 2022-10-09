@@ -28,8 +28,6 @@ class Parser {
   TokenInfo* popToken();
     /* peek 会返回当前位置+num处的token，但不会改变nowTokenListPtr */
   TokenInfo* peekToken(int num);
-  /* 从当前位置向后找，判断先遇到分号还是赋值等号，若先是等号则返回true  */
-  bool isAssign();
 
   CompUnitNode* compUnitAnalyse();
   DeclNode* declAnalyse();
@@ -65,7 +63,11 @@ class Parser {
   LOrExpNode* lOrExpAnalyse();
   ConstExpNode* constExpAnalyse();
 
+  /* 检查类型为tokenType的符号是否缺失，
+    如果缺失就将错误信息加入errorList，否则popToken */
   bool tokenLackHandler(TokenType tokenType);
+
+  bool Parser::isExpFirst();
 
 };
 
