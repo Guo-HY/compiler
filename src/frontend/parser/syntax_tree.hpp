@@ -209,12 +209,8 @@ class FuncDefNode : public SyntaxNode {
   std::string toString() override;
 };
 
-class MainFuncDefNode : public SyntaxNode {
+class MainFuncDefNode : public FuncDefNode {  
   public:
-  BlockNode* blockNode;
-  
-  public:
-  MainFuncDefNode(): blockNode(NULL) {}
   std::string toString() override;
 };
 

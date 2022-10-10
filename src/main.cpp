@@ -24,7 +24,6 @@ int main(int argc, char **argv)
     panic("can't open source file");
   }
 
-  symbolTableInit();
   Lexer*lexer = new Lexer(fp);
   ret = lexer->getAllToken();
   if (ret == false) {

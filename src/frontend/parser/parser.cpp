@@ -6,7 +6,7 @@ extern char tokenValue[][20];
 extern SymbolTable* currentSymbolTable;
 extern SymbolTable* globalSymbolTable;
 extern ErrorList errorList;
-
+extern void symbolTableInit();
 /* ------------------ tools function ------------------ */
 TokenInfo* Parser::popToken() 
 {
@@ -86,6 +86,7 @@ bool Parser::formatErrorHandler(int pLine, int formatNum, TokenInfo* token)
 
 CompUnitNode* Parser::compUnitAnalyse() 
 {
+  symbolTableInit();
   CompUnitNode* node = new CompUnitNode();
   /* deal Decl : CONSTTK | INTTK IDENFR !LPARENT */ 
   while ((peekToken(0)->tokenType == TokenType::CONSTTK) || 
@@ -252,15 +253,14 @@ InitValNode* Parser::initValAnalyse()
 
 FuncDefNode* Parser::funcDefAnalyse()
 {
+  /* 在解析函数形参前需要新建符号表 */
+  currentSymbolTable = currentSymbolTable->newSon();
+
   FuncDefNode* node = new FuncDefNode();
   node->funcTypeNode = funcTypeAnalyse();
   node->ident = peekToken(0);
   popToken(); /* eat IDENFR */
   popToken(); /* eat LPARENT */
-
-  /* 在解析函数形参前需要新建符号表 */
-  currentSymbolTable = currentSymbolTable->newSon();
-
   if (peekToken(0)->tokenType == TokenType::INTTK) {
     node->funcFParamsNode = funcFParamsAnalyse();
     node->hasFuncFParams = true;
@@ -272,20 +272,30 @@ FuncDefNode* Parser::funcDefAnalyse()
   globalSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SyntaxNodeType::FUNC_SNT);
 
   node->blockNode = blockAnalyse(false);
-  /* 由于block中没有回溯符号表，因此这里需要回溯  */
+  /* 回溯符号表 */
   currentSymbolTable = currentSymbolTable->findParent();
   return node;
 }
 
 MainFuncDefNode* Parser::mainFuncDefAnalyse()
 {
+  /* 在解析函数形参前需要新建符号表 */
+  currentSymbolTable = currentSymbolTable->newSon();
+
   MainFuncDefNode* node = new MainFuncDefNode();
-  popToken(); /* eat INTTK */
+  node->funcTypeNode = funcTypeAnalyse();
+  node->ident = peekToken(0);
   popToken(); /* eat MAINTK */
   popToken(); /* eat LPARENT */
   /* check if lack RPARENT ,if not lack then eat */
   tokenLackHandler(TokenType::RPARENT);
-  node->blockNode = blockAnalyse(true);
+
+  /* insert symbol to globalSymbolTable 需要在解析block前，解析形参后将函数插入符号表 */
+  globalSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SyntaxNodeType::FUNC_SNT);
+  
+  node->blockNode = blockAnalyse(false);
+  /* 回溯符号表 */
+  currentSymbolTable = currentSymbolTable->findParent();
   return node;
 }
 
@@ -507,6 +517,8 @@ LValNode* Parser::lValAnalyse()
 {
   LValNode* node = new LValNode();
   node->ident = peekToken(0);
+  /* check error c */
+  currentSymbolTable->undefSymbolHandler(&(node->ident->str), node->ident->line);
   popToken(); /* eat IDENFR */
   while (peekToken(0)->tokenType == TokenType::LBRACK) {
     popToken(); /* eat LBRACK */
@@ -577,6 +589,8 @@ UnaryExpNode* Parser::unaryExpAnalyse(LValNode* lval)
   peekToken(1)->tokenType == TokenType::LPARENT) {
     node->unaryExpType = UnaryExpType::UNARY_FUNCCALL;
     node->ident = peekToken(0);
+    /* check error c */
+    currentSymbolTable->undefSymbolHandler(&(node->ident->str), node->ident->line);
     popToken(); /* eat IDENFR */
     popToken(); /* eat LPARENT */
     if (peekToken(0)->tokenType != TokenType::RPARENT) {

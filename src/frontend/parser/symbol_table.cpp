@@ -42,7 +42,7 @@ bool SymbolTable::insertSymbol(std::string* symbolName, SymbolItem* symbolItem)
   //   return true;
   // }
   if (this->symbols.count(*symbolName) != 0) {
-    Log("error : currentSymbolTable already has symbol %s\n", symbolName->c_str());
+    // Log("error : currentSymbolTable already has symbol %s\n", symbolName->c_str());
     errorList.addErrorInfo(new ErrorInfo(symbolItem->line, 'b'));
     return false;
   }
