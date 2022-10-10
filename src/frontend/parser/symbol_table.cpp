@@ -7,11 +7,11 @@
 SymbolTable* globalSymbolTable;
 /* 当前符号表 */
 SymbolTable* currentSymbolTable;
-
+/* 当前表id */
 int currentTableId;
 
 std::map<int, SymbolTable*> allSymbolTable;
-
+/* 存放错误信息 */
 extern ErrorList errorList;
 
 char symbolTypeName[][20] {
@@ -21,8 +21,6 @@ char symbolTypeName[][20] {
   "ARRAY",
   "FUNC",
 };
-
-
 
 bool SymbolTable::insertSymbol(std::string* symbolName, SymbolItem* symbolItem)
 {
@@ -137,46 +135,6 @@ ObjectSymbolItem* SymbolTable::abstVarDefNode2ObjectSymbolItem(AbstVarDefNode* n
   return objectItem;
 }
 
-// ObjectSymbolItem* SymbolTable::funcFParamNode2ObjectSymbolItem(SyntaxNode* node) {
-//   ObjectSymbolItem* objectItem = new ObjectSymbolItem();
-//   FuncFParamNode* funcFParamNode = (FuncFParamNode*)node;
-//   objectItem->line = funcFParamNode->ident->line;
-//   if (funcFParamNode->arrayDimension == 0) {
-//     objectItem->symbolType = SymbolType::INT;
-//   } else {
-//     objectItem->symbolType = SymbolType::ARRAY;
-//   }
-//   objectItem->dimension = funcFParamNode->arrayDimension;
-//   return objectItem;
-// }
-
-// ObjectSymbolItem* SymbolTable::constDefNode2ObjectSymbolItem(SyntaxNode* node) {
-//   ObjectSymbolItem* objectItem = new ObjectSymbolItem();
-//   ConstDefNode* constDefNode = (ConstDefNode*)node;
-//   objectItem->line = constDefNode->ident->line;
-//   objectItem->isConst = true;
-//   if (constDefNode->arrayDimension == 0) {
-//     objectItem->symbolType = SymbolType::INT;
-//   } else {
-//     objectItem->symbolType = SymbolType::ARRAY;
-//   }
-//   objectItem->dimension = constDefNode->arrayDimension;
-//   return objectItem;
-// }
-
-// ObjectSymbolItem* SymbolTable::varDefNode2ObjectSymbolItem(SyntaxNode* node) {
-//   ObjectSymbolItem* objectItem = new ObjectSymbolItem();
-//   VarDefNode* varDefNode = (VarDefNode*)node;
-//   objectItem->line = varDefNode->ident->line;
-//   if (varDefNode->arrayDimension = 0) {
-//     objectItem->symbolType = SymbolType::INT;
-//   } else {
-//     objectItem->symbolType = SymbolType::ARRAY;
-//   }
-//   objectItem->dimension = varDefNode->arrayDimension;
-//   return objectItem;
-// }
-
 void SymbolTable::toString(int tabNum)
 {
   tprintf(tabNum,"############################\n");
@@ -224,4 +182,102 @@ void allSymbolTableToString()
   for (iter = allSymbolTable.begin(); iter != allSymbolTable.end(); iter++) {
     iter->second->toString(0);
   }
+}
+
+bool SymbolTable::funcCallErrorHandler(std::string* funcName, 
+  std::vector<ObjectSymbolItem*>* funcCParams, int line)
+{
+  FuncSymbolItem* f = (FuncSymbolItem*)this->findSymbol(funcName);
+  if (f == NULL) {
+    return false;
+  }
+  int rNum = 0;
+  for (int i = 0; i < funcCParams->size(); i++) {
+    if ((*funcCParams)[i]->symbolType != SymbolType::NONE_ST) {
+      rNum++;
+    }
+  }
+  if (rNum != f->funcFParams.size()) {
+    /* 函数参数个数不匹配 */
+    errorList.addErrorInfo(new ErrorInfo(line, 'd'));
+    return true;
+  }
+  for (int i = 0; i < funcCParams->size(); i++) {
+    if (!(*funcCParams)[i]->equals(f->funcFParams[i])) {
+      /* 函数参数类型存在不匹配 */
+      errorList.addErrorInfo(new ErrorInfo(line, 'e'));
+      return true;
+    }
+  }
+  return false;
+} 
+
+ObjectSymbolItem* SymbolTable::getFuncReturnType(std::string* funcName)
+{
+  ObjectSymbolItem* o = new ObjectSymbolItem();
+  SymbolItem* item = this->findSymbol(funcName);
+  if (item == NULL || item->symbolType != SymbolType::FUNC_ST) {
+    o->symbolType = SymbolType::NONE_ST;
+    return o;
+  }
+  o->dimension = 0;
+  o->isConst = false;
+  o->symbolType = item->symbolType;
+  return o;
+}
+
+ObjectSymbolItem* SymbolTable::getLValType(LValNode* node)
+{
+  ObjectSymbolItem* o = new ObjectSymbolItem();
+  SymbolItem* item = this->findSymbol(&(node->ident->str));
+  if (item == NULL ) {
+    o->symbolType = SymbolType::NONE_ST;
+    return o;
+  }
+  int deDim = node->expNodes.size();
+  ObjectSymbolItem* oItem = (ObjectSymbolItem*)item;
+  o->isConst = oItem->isConst;
+  o->dimension = oItem->dimension - deDim;
+  if (o->dimension > 0) {
+    o->symbolType = SymbolType::ARRAY_ST;
+  } else {
+    o->symbolType = SymbolType::INT_ST;
+  }
+  return o;
+}
+
+ObjectSymbolItem* SymbolTable::getNumberType()
+{
+  ObjectSymbolItem* o = new ObjectSymbolItem();
+  o->dimension = 0;
+  o->isConst = false;
+  o->symbolType = SymbolType::INT_ST;
+  return o;
+}
+
+bool SymbolTable::funcReturnCheck(std::string* funcName, bool hasReturnExp, int line)
+{
+  FuncSymbolItem* f = (FuncSymbolItem*)this->findSymbol(funcName);
+  if (f == NULL) {
+    return false;
+  }
+  if (f->returnType == SymbolType::VOID_ST && hasReturnExp) {
+    errorList.addErrorInfo(new ErrorInfo(line, 'f'));
+    return true;
+  }
+
+  return false;
+}
+
+bool SymbolTable::constModifyCheck(LValNode* node)
+{
+  SymbolItem* item = this->findSymbol(&(node->ident->str));
+  if (item == NULL || item->symbolType == SymbolType::FUNC_ST) {
+    return false;
+  }
+  if (((ObjectSymbolItem*)item)->isConst) {
+    errorList.addErrorInfo(new ErrorInfo(node->ident->line, 'h'));
+    return true;
+  }
+  return false;
 }

@@ -41,19 +41,19 @@ class Parser {
   FuncFParamsNode* funcFParamsAnalyse();
   FuncFParamNode* FuncFParamAnalyse();
   /* newSymbolTable 为真表示需要新建符号表 */
-  BlockNode* blockAnalyse(bool newSymbolTable);
-  BlockItemNode* blockItemAnalyse();
-  StmtNode* stmtAnalyse();
-  ExpNode* expAnalyse(LValNode*);
+  BlockNode* blockAnalyse(bool newSymbolTable, std::string* funcName, bool needRE);
+  BlockItemNode* blockItemAnalyse(std::string* funcName, bool* hasRE);
+  StmtNode* stmtAnalyse(std::string* funcName, bool* hasRE);
+  ExpNode* expAnalyse(LValNode* lval, bool addToNFCP, std::vector<ObjectSymbolItem*>* funcCParams);
   CondNode* condAnalyse();
   LValNode* lValAnalyse();
-  PrimaryExpNode* primaryExpAnalyse(LValNode*);
+  PrimaryExpNode* primaryExpAnalyse(LValNode* lval, bool addToNFCP, std::vector<ObjectSymbolItem*>* funcCParams);
   NumberNode* numberAnalyse();
-  UnaryExpNode* unaryExpAnalyse(LValNode*);
+  UnaryExpNode* unaryExpAnalyse(LValNode* lval, bool addToNFCP, std::vector<ObjectSymbolItem*>* funcCParams);
   UnaryOpNode* unaryOpAnalyse();
-  FuncRParamsNode* funcRParamsAnalyse();
-  MulExpNode* mulExpAnalyse(LValNode*);
-  AddExpNode* addExpAnalyse(LValNode*);
+  FuncRParamsNode* funcRParamsAnalyse(std::vector<ObjectSymbolItem*>* funcCParams);
+  MulExpNode* mulExpAnalyse(LValNode* lval, bool addToNFCP, std::vector<ObjectSymbolItem*>* funcCParams);
+  AddExpNode* addExpAnalyse(LValNode* lval, bool addToNFCP, std::vector<ObjectSymbolItem*>* funcCParams);
   RelExpNode* relExpAnalyse();
   EqExpNode* eqExpAnalyse();
   LAndExpNode* lAndExpAnalyse();
@@ -65,6 +65,7 @@ class Parser {
   bool tokenLackHandler(TokenType tokenType);
   /* 检查格式字符串是否含有非法字符，参数个数是否匹配 */
   bool formatErrorHandler(int pLine, int formatNum, TokenInfo* token);
+  bool errorMHandler(int line);
   
   bool isExpFirst();
 

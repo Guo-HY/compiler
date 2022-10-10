@@ -48,7 +48,15 @@ class SymbolTable {
 
   int getTableId() { return this->tableId; }
 
+  /* error handle */
   bool undefSymbolHandler(std::string* symbolName, int line);
+  bool funcCallErrorHandler(std::string* funcName, std::vector<ObjectSymbolItem*>* funcCParams, int line);
+  /* 如果出错，返回NONE类型的Object */
+  ObjectSymbolItem* getFuncReturnType(std::string* funcName);
+  ObjectSymbolItem* getLValType(LValNode* node);
+  ObjectSymbolItem* getNumberType();
+  bool funcReturnCheck(std::string* funcName, bool hasReturnExp, int line);
+  bool constModifyCheck(LValNode* node);
 
   private:
   /* 将符号对象插入符号表中，成功返回true，失败返回false */
@@ -84,12 +92,17 @@ class ObjectSymbolItem : public SymbolItem {
     SymbolItem();
   }
 
+  bool equals(ObjectSymbolItem* obj) {
+    return (this->dimension == obj->dimension &&
+    this->isConst == obj->isConst &&
+    this->symbolType == obj->symbolType);
+  }
 };
 
 class FuncSymbolItem : public SymbolItem {
   public:
   SymbolType returnType;
-  std::vector<SymbolItem*> funcFParams;
+  std::vector<ObjectSymbolItem*> funcFParams;
 
   FuncSymbolItem() : returnType(SymbolType::NONE_ST) {
     SymbolItem();
