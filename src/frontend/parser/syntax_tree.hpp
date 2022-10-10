@@ -11,6 +11,7 @@ class CompUnitNode;
 class DeclNode;
 class ConstDeclNode;
 class BTypeNode;
+class AbstVarDefNode;
 class ConstDefNode;
 class ConstInitValNode;
 class VarDeclNode;
@@ -32,13 +33,15 @@ class NumberNode;
 class UnaryExpNode;
 class UnaryOpNode;
 class FuncRParamsNode;
+class ConstExpNode;
+class BinaryExpNode;
 class MulExpNode;
 class AddExpNode;
 class RelExpNode;
 class EqExpNode;
 class LAndExpNode;
 class LOrExpNode;
-class ConstExpNode;
+
 
 enum DeclNodeType {
   DECL_NONE,
@@ -127,17 +130,24 @@ class BTypeNode : public SyntaxNode {
   std::string toString() override;
 };
 
-class ConstDefNode : public SyntaxNode {
+class AbstVarDefNode : public SyntaxNode {
   public:
-  BTypeNode* bTypeNode;
   TokenInfo* ident;
   int arrayDimension;
+  bool isConst;
+  BTypeNode* bTypeNode;
+
+  public:
+  AbstVarDefNode() : ident(NULL), arrayDimension(0), isConst(false), bTypeNode(NULL) {}
+};
+
+class ConstDefNode : public AbstVarDefNode {
+  public:
   std::vector<ConstExpNode*> constExpNodes;
   ConstInitValNode* constInitValNode;
   
   public:
-  ConstDefNode(): bTypeNode(NULL), ident(NULL), arrayDimension(0), 
-  constInitValNode(NULL) {}
+  ConstDefNode(): constInitValNode(NULL) {}
   std::string toString() override;
 };
 
@@ -163,16 +173,14 @@ class VarDeclNode : public SyntaxNode {
   std::string toString() override;
 };
 
-class VarDefNode : public SyntaxNode {
+class VarDefNode : public AbstVarDefNode {
   public:
-  TokenInfo* ident;
-  BTypeNode* bTypeNode;
   std::vector<ConstExpNode*> constExpNodes;
   bool hasInitVal;  
   InitValNode* initValNode;
   
   public:
-  VarDefNode(): ident(NULL), bTypeNode(NULL), hasInitVal(false), initValNode(NULL) {}
+  VarDefNode(): initValNode(NULL) {}
   std::string toString() override;
 };
 
@@ -227,16 +235,12 @@ class FuncFParamsNode : public SyntaxNode {
   std::string toString() override;
 };
 
-class FuncFParamNode : public SyntaxNode {
+class FuncFParamNode : public AbstVarDefNode {
   public:
-  BTypeNode* bTypeNode;
-  TokenInfo* ident;
-  int arrayDimension;
   std::vector<ConstExpNode*> constExpNodes;
   
   public:
-  FuncFParamNode(): bTypeNode(NULL), ident(NULL), 
-  arrayDimension(0) {}
+  FuncFParamNode() {}
   std::string toString() override;
 };
 
@@ -361,81 +365,6 @@ class FuncRParamsNode : public SyntaxNode {
   std::string toString() override;
 };
 
-class MulExpNode : public SyntaxNode {
-  public:
-  std::vector<UnaryExpNode*> unaryExpNodes;
-  std::vector<TokenInfo*> ops;
-  public:
-  std::string toString() override;
-};
-
-class AddExpNode : public SyntaxNode {
-  public:
-  // bool isLeaf;
-  // MulExpNode* mulExpNode;
-  // TokenInfo* op;
-  // AddExpNode* addExpNode;
-  std::vector<MulExpNode*> MulExpNodes;
-  std::vector<TokenInfo*> ops;
-  public:
-  // AddExpNode(): isLeaf(false), mulExpNode(NULL), op(NULL), 
-  // addExpNode(NULL) {} 
-  std::string toString() override;
-};
-
-class RelExpNode : public SyntaxNode {
-  public:
-  // bool isLeaf;
-  // AddExpNode* addExpNode;
-  // TokenInfo* op;
-  // RelExpNode* relExpNode;
-  std::vector<AddExpNode*> addExpNodes;
-  std::vector<TokenInfo*> ops;  
-  public:
-  // RelExpNode(): isLeaf(false), addExpNode(NULL), op(NULL), 
-  // relExpNode(NULL) {}
-  std::string toString() override;
-};
-
-class EqExpNode : public SyntaxNode {
-  public:
-  // bool isLeaf;
-  // RelExpNode* relExpNode;
-  // TokenInfo* op;
-  // EqExpNode* eqExpNode;
-  std::vector<RelExpNode*> relExpNodes;
-  std::vector<TokenInfo*> ops;
-  public:
-  // EqExpNode(): isLeaf(false), relExpNode(NULL), op(NULL), eqExpNode(NULL) {}
-  std::string toString() override;
-};
-
-class LAndExpNode : public SyntaxNode {
-  public:
-  // bool isLeaf;
-  // EqExpNode* eqExpNode;
-  // TokenInfo* op;
-  // LAndExpNode* lAndExpNode;
-  std::vector<EqExpNode*> eqExpNodes;
-  std::vector<TokenInfo*> ops;
-  public:
-  // LAndExpNode(): isLeaf(false), eqExpNode(NULL), op(NULL), lAndExpNode(NULL) {}
-  std::string toString() override;
-};
-
-class LOrExpNode : public SyntaxNode {
-  public:
-  // bool isLeaf;
-  // LAndExpNode* lAndExpNode;
-  // TokenInfo* op;
-  // LOrExpNode* lOrExpNode;
-  std::vector<LAndExpNode*> lAndExpNodes;
-  std::vector<TokenInfo*> ops;
-  public:
-  // LOrExpNode(): isLeaf(false), lAndExpNode(NULL), op(NULL), lOrExpNode(NULL) {}
-  std::string toString() override;
-};
-
 class ConstExpNode : public SyntaxNode {
   public:
   AddExpNode* addExpNode;
@@ -443,6 +372,55 @@ class ConstExpNode : public SyntaxNode {
   public:
   ConstExpNode(): addExpNode(NULL) {}
   std::string toString() override;
+};
+
+enum BinaryExpType {
+  NONE,
+  MUL,
+  ADD,
+  REL,
+  EQ,
+  LAND,
+  LOR,
+};
+
+class BinaryExpNode : public SyntaxNode {
+  public:
+  BinaryExpType type;
+  std::vector<BinaryExpNode*> operands;
+  std::vector<TokenInfo*> ops;
+  public:
+  BinaryExpNode() : type(BinaryExpType::NONE) {}
+  BinaryExpNode(BinaryExpType t) : type(t) {}
+  std::string toString() override;
+};
+
+class MulExpNode : public BinaryExpNode {
+  public:
+  std::vector<UnaryExpNode*> unaryExpNodes;
+  public:
+  MulExpNode(BinaryExpType t) : BinaryExpNode(t) {}
+  std::string toString() override;
+};
+
+class AddExpNode : public BinaryExpNode {
+
+};
+
+class RelExpNode : public BinaryExpNode {
+
+};
+
+class EqExpNode : public BinaryExpNode {
+
+};
+
+class LAndExpNode : public BinaryExpNode {
+
+};
+
+class LOrExpNode : public BinaryExpNode {
+
 };
 
 

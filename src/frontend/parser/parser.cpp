@@ -4,7 +4,8 @@
 extern char tokenName[][20];
 extern char tokenValue[][20];
 extern SymbolTable* currentSymbolTable;
-extern SymbolTable* funcTable;
+extern SymbolTable* globalSymbolTable;
+extern ErrorList errorList;
 
 /* ------------------ tools function ------------------ */
 TokenInfo* Parser::popToken() 
@@ -23,10 +24,12 @@ TokenInfo* Parser::peekToken(int num)
   if (nowTokenListPtr + num >= (int)tokenInfoList.size() ||
       nowTokenListPtr + num < 0) {
     Log("error : peek out of bounds\n");
+    return NULL;
   }
   return tokenInfoList[nowTokenListPtr + num];
 }
 /* ------------------ tools function ------------------ */
+
 /* ------------------ error handle ------------------ */
 bool Parser::tokenLackHandler(TokenType tokenType)
 {
@@ -48,10 +51,35 @@ bool Parser::tokenLackHandler(TokenType tokenType)
       errorInfo->errorType = '#';
       break;
     }
-    this->errorList->addErrorInfo(errorInfo);
+    errorList.addErrorInfo(errorInfo);
     return true;
   }
   popToken();
+  return false;
+}
+
+bool Parser::formatErrorHandler(int pLine, int formatNum, TokenInfo* token)
+{
+  const char* str = token->str.c_str();
+  int fNum = 0;
+  int fLine = token->line;
+  for (int i = 1; str[i] != '"'; i++) {
+    if (str[i] == 32 || str[i] == 33 || (str[i] >= 40 && str[i] <= 126)) {
+      if (str[i] == '\\' && str[i + 1] != 'n') {
+        errorList.addErrorInfo(new ErrorInfo(fLine, 'a'));
+        return true;
+      }
+    } else if (str[i] == '%' && str[i + 1] == 'd') {
+      fNum++;
+    } else {
+      errorList.addErrorInfo(new ErrorInfo(fLine, 'a'));
+      return true;
+    }
+  }
+  if (fNum != formatNum) {
+    errorList.addErrorInfo(new ErrorInfo(pLine, 'l'));
+    return true;
+  }
   return false;
 }
 /* ------------------ error handle ------------------ */
@@ -115,6 +143,7 @@ BTypeNode* Parser::bTypeAnalyse()
 ConstDefNode* Parser::constDefAnalyse(BTypeNode* bType)
 {
   ConstDefNode* node = new ConstDefNode();
+  node->isConst = true;
   node->bTypeNode = bType;
   node->ident = peekToken(0);
   popToken(); /* eat IDENFR */
@@ -131,7 +160,7 @@ ConstDefNode* Parser::constDefAnalyse(BTypeNode* bType)
   node->constInitValNode = constInitValAnalyse();
 
   /* insert symbol to currentSymbolTable */
-  currentSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SymbolType::CONST);
+  currentSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SyntaxNodeType::ABSTVAR_SNT);
 
   return node;
 }
@@ -181,6 +210,7 @@ VarDefNode* Parser::varDefAnalyse(BTypeNode* bType)
   popToken(); /* eat IDENFR */
   while (peekToken(0)->tokenType == TokenType::LBRACK) {
     popToken(); /* eat LBRACK */
+    (node->arrayDimension)++;
     node->constExpNodes.push_back(constExpAnalyse());
     /* check if lack RBRACK ,if not lack then eat */
     tokenLackHandler(TokenType::RBRACK);
@@ -192,7 +222,7 @@ VarDefNode* Parser::varDefAnalyse(BTypeNode* bType)
   }
 
   /* insert symbol to currentSymbolTable */
-  currentSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SymbolType::VAR);
+  currentSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SyntaxNodeType::ABSTVAR_SNT);
 
   return node;
 }
@@ -237,8 +267,9 @@ FuncDefNode* Parser::funcDefAnalyse()
   }
   /* check if lack RPARENT ,if not lack then eat */
   tokenLackHandler(TokenType::RPARENT);
-  /* insert symbol to funcTable 需要在解析block前将函数插入函数表 */
-  funcTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SymbolType::FUNC);
+
+  /* insert symbol to globalSymbolTable 需要在解析block前，解析形参后将函数插入符号表 */
+  globalSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SyntaxNodeType::FUNC_SNT);
 
   node->blockNode = blockAnalyse(false);
   /* 由于block中没有回溯符号表，因此这里需要回溯  */
@@ -298,7 +329,7 @@ FuncFParamNode* Parser::FuncFParamAnalyse()
   }
 
   /* insert symbol to currentSymbolTable */
-  currentSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SymbolType::FUNCFPARAM);
+  currentSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SyntaxNodeType::ABSTVAR_SNT);
 
   return node;
 }
@@ -352,6 +383,8 @@ StmtNode* Parser::stmtAnalyse()
   TokenType t = peekToken(0)->tokenType;
 
   if (t == TokenType::PRINTFTK) {
+    int fNum = 0;
+    int pLine = peekToken(0)->line;
     node->stmtType = StmtType::STMT_PRINTF;
     popToken(); /* eat PRINTFTK */
     popToken(); /* eat LPARENT */
@@ -360,7 +393,10 @@ StmtNode* Parser::stmtAnalyse()
     while (peekToken(0)->tokenType == TokenType::COMMA) {
       popToken(); /* eat COMMA */
       node->expNodes.push_back(expAnalyse(NULL));
+      fNum++;
     }
+    /* check error a & l */
+    formatErrorHandler(pLine, fNum, node->formatString);
     /* check if lack RPARENT if not lack then eat */
     tokenLackHandler(TokenType::RPARENT);
     /* check if lack SEMICN if not lack then eat */
@@ -577,7 +613,7 @@ FuncRParamsNode* Parser::funcRParamsAnalyse()
 
 MulExpNode* Parser::mulExpAnalyse(LValNode* lval)
 {
-  MulExpNode* node = new MulExpNode();
+  MulExpNode* node = new MulExpNode(BinaryExpType::MUL);
   node->unaryExpNodes.push_back(unaryExpAnalyse(lval));
   while (peekToken(0)->tokenType == TokenType::MULT ||
   peekToken(0)->tokenType == TokenType::DIV ||
@@ -591,65 +627,65 @@ MulExpNode* Parser::mulExpAnalyse(LValNode* lval)
 
 AddExpNode* Parser::addExpAnalyse(LValNode* lval)
 {
-  AddExpNode* node = new AddExpNode();
-  node->MulExpNodes.push_back(mulExpAnalyse(lval));
+  AddExpNode* node = (AddExpNode*)new BinaryExpNode(BinaryExpType::ADD);
+  node->operands.push_back(mulExpAnalyse(lval));
   while (peekToken(0)->tokenType == TokenType::PLUS ||
   peekToken(0)->tokenType == TokenType::MINU) {
     node->ops.push_back(peekToken(0));
     popToken(); /* eat PLUS | MINU */
-    node->MulExpNodes.push_back(mulExpAnalyse(NULL));
+    node->operands.push_back(mulExpAnalyse(NULL));
   }
   return node;
 }
 
 RelExpNode* Parser::relExpAnalyse()
 {
-  RelExpNode* node = new RelExpNode();
-  node->addExpNodes.push_back(addExpAnalyse(NULL));
+  RelExpNode* node = (RelExpNode*)new BinaryExpNode(BinaryExpType::REL);
+  node->operands.push_back(addExpAnalyse(NULL));
   while (peekToken(0)->tokenType == TokenType::LSS || 
   peekToken(0)->tokenType == TokenType::GRE ||
   peekToken(0)->tokenType == TokenType::LEQ ||
   peekToken(0)->tokenType == TokenType::GEQ) {
     node->ops.push_back(peekToken(0));
     popToken(); /* eat LSS | GRE | LEQ | GEQ */
-    node->addExpNodes.push_back(addExpAnalyse(NULL));
+    node->operands.push_back(addExpAnalyse(NULL));
   }
   return node;
 }
 
 EqExpNode* Parser::eqExpAnalyse()
 {
-  EqExpNode* node = new EqExpNode();
-  node->relExpNodes.push_back(relExpAnalyse());
+  EqExpNode* node = (EqExpNode*)new BinaryExpNode(BinaryExpType::EQ);
+  node->operands.push_back(relExpAnalyse());
   while (peekToken(0)->tokenType == TokenType::EQL ||
   peekToken(0)->tokenType == TokenType::NEQ) {
     node->ops.push_back(peekToken(0));
     popToken(); /* eat EQL | NEQ */
-    node->relExpNodes.push_back(relExpAnalyse());
+    node->operands.push_back(relExpAnalyse());
   }
   return node;
 }
 
 LAndExpNode* Parser::lAndExpAnalyse()
 {
-  LAndExpNode* node = new LAndExpNode();
-  node->eqExpNodes.push_back(eqExpAnalyse());
+  LAndExpNode* node = (LAndExpNode*)new BinaryExpNode(BinaryExpType::LAND);
+  node->operands.push_back(eqExpAnalyse());
   while (peekToken(0)->tokenType == TokenType::AND) {
     node->ops.push_back(peekToken(0));
     popToken(); /* eat AND */
-    node->eqExpNodes.push_back(eqExpAnalyse());
+    node->operands.push_back(eqExpAnalyse());
   }
   return node;
 }
 
 LOrExpNode* Parser::lOrExpAnalyse()
 {
-  LOrExpNode* node = new LOrExpNode();
-  node->lAndExpNodes.push_back(lAndExpAnalyse());
+  LOrExpNode* node = (LOrExpNode*)new BinaryExpNode(BinaryExpType::LOR);
+  node->operands.push_back(lAndExpAnalyse());
   while (peekToken(0)->tokenType == TokenType::OR) {
     node->ops.push_back(peekToken(0));
     popToken(); /* eat OR */
-    node->lAndExpNodes.push_back(lAndExpAnalyse());
+    node->operands.push_back(lAndExpAnalyse());
   }
   return node;
 }

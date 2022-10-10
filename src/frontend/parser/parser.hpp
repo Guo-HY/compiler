@@ -8,10 +8,9 @@ extern std::vector<TokenInfo*> tokenInfoList;
 
 class Parser {
   public:
-  Parser(ErrorList* list) {
+  Parser() {
     this->nowTokenListPtr = 0;
     this->root = NULL;
-    this->errorList = list;
   }
 
   SyntaxNode* syntaxAnalyse();
@@ -22,8 +21,6 @@ class Parser {
   CompUnitNode* root;
   /* 当前关注的token指针，处理完一个语法元素后，指针永远指向下一个 */
   int nowTokenListPtr;
-  /* 错误列表指针 */
-  ErrorList* errorList;
   /* pop 会返回当前token的指针并将nowTokenListPtr加一 */
   TokenInfo* popToken();
     /* peek 会返回当前位置+num处的token，但不会改变nowTokenListPtr */
@@ -66,8 +63,10 @@ class Parser {
   /* 检查类型为tokenType的符号是否缺失，
     如果缺失就将错误信息加入errorList，否则popToken */
   bool tokenLackHandler(TokenType tokenType);
-
-  bool Parser::isExpFirst();
+  /* 检查格式字符串是否含有非法字符，参数个数是否匹配 */
+  bool formatErrorHandler(int pLine, int formatNum, TokenInfo* token);
+  
+  bool isExpFirst();
 
 };
 

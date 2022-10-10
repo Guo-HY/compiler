@@ -20,6 +20,10 @@ class ErrorInfo {
   public:
     int line;
     char errorType;
+
+  ErrorInfo () : line(-1), errorType('#') {}
+
+  ErrorInfo(int l, char e) : line(l), errorType(e) {}
 };
 
 #endif

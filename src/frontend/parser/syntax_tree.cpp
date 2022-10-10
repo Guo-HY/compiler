@@ -445,77 +445,40 @@ std::string FuncRParamsNode::toString()
   return s;
 } 
 
+std::string BinaryExpNode::toString()
+{
+  std::string s;
+  for (int i = 0; i < (int)operands.size(); i++) {
+    s += operands[i]->toString();
+    switch (this->type)
+    {
+    case BinaryExpType::ADD:
+      s += "<AddExp>\n"; break;
+    case BinaryExpType::EQ:
+      s += "<EqExp>\n"; break;
+    case BinaryExpType::LAND:
+      s += "<LAndExp>\n"; break;
+    case BinaryExpType::LOR:
+      s += "<LOrExp>\n"; break;
+    case BinaryExpType::REL:
+      s += "<RelExp>\n"; break;
+    default:
+      Log("error : illegal binary type\n");
+      break;
+    }
+    if (i < (int)ops.size()) {
+      s += tokenToString(ops[i]->tokenType);
+    }
+  }
+  return s;
+}
+
 std::string MulExpNode::toString()
 {
   std::string s;
   for (int i = 0; i < (int)unaryExpNodes.size(); i++) {
     s += unaryExpNodes[i]->toString();
     s += "<MulExp>\n";
-    if (i < (int)ops.size()) {
-      s += tokenToString(ops[i]->tokenType);
-    }
-  }
-  return s;
-}
-
-std::string AddExpNode::toString()
-{
-  std::string s;
-  for (int i = 0; i < (int)MulExpNodes.size(); i++) {
-    s += MulExpNodes[i]->toString();
-    s += "<AddExp>\n";
-    if (i < (int)ops.size()) {
-      s += tokenToString(ops[i]->tokenType);
-    }
-  }
-  return s;
-}
-
-std::string RelExpNode::toString()
-{
-  std::string s;
-  for (int i = 0; i < (int)addExpNodes.size(); i++) {
-    s += addExpNodes[i]->toString();
-    s += "<RelExp>\n";
-    if (i < (int)ops.size()) {
-      s += tokenToString(ops[i]->tokenType);
-    }
-  }
-  return s;
-}
-
-std::string EqExpNode::toString()
-{
-  std::string s;
-  for (int i = 0; i < (int)relExpNodes.size(); i++) {
-    s += relExpNodes[i]->toString();
-    s += "<EqExp>\n";
-    if (i < (int)ops.size()) {
-      s += tokenToString(ops[i]->tokenType);
-    }
-  }
-  return s;
-}
-
-std::string LAndExpNode::toString()
-{
-  std::string s;
-  for (int i = 0; i < (int)eqExpNodes.size(); i++) {
-    s += eqExpNodes[i]->toString();
-    s += "<LAndExp>\n";
-    if (i < (int)ops.size()) {
-      s += tokenToString(ops[i]->tokenType);
-    }
-  }
-  return s;
-}
-
-std::string LOrExpNode::toString()
-{
-  std::string s;
-  for (int i = 0; i < (int)lAndExpNodes.size(); i++) {
-    s += lAndExpNodes[i]->toString();
-    s += "<LOrExp>\n";
     if (i < (int)ops.size()) {
       s += tokenToString(ops[i]->tokenType);
     }
@@ -530,3 +493,69 @@ std::string ConstExpNode::toString()
   s += "<ConstExp>\n";
   return s;
 }
+
+// std::string AddExpNode::toString()
+// {
+//   std::string s;
+//   for (int i = 0; i < (int)MulExpNodes.size(); i++) {
+//     s += MulExpNodes[i]->toString();
+//     s += "<AddExp>\n";
+//     if (i < (int)ops.size()) {
+//       s += tokenToString(ops[i]->tokenType);
+//     }
+//   }
+//   return s;
+// }
+
+// std::string RelExpNode::toString()
+// {
+//   std::string s;
+//   for (int i = 0; i < (int)addExpNodes.size(); i++) {
+//     s += addExpNodes[i]->toString();
+//     s += "<RelExp>\n";
+//     if (i < (int)ops.size()) {
+//       s += tokenToString(ops[i]->tokenType);
+//     }
+//   }
+//   return s;
+// }
+
+// std::string EqExpNode::toString()
+// {
+//   std::string s;
+//   for (int i = 0; i < (int)relExpNodes.size(); i++) {
+//     s += relExpNodes[i]->toString();
+//     s += "<EqExp>\n";
+//     if (i < (int)ops.size()) {
+//       s += tokenToString(ops[i]->tokenType);
+//     }
+//   }
+//   return s;
+// }
+
+// std::string LAndExpNode::toString()
+// {
+//   std::string s;
+//   for (int i = 0; i < (int)eqExpNodes.size(); i++) {
+//     s += eqExpNodes[i]->toString();
+//     s += "<LAndExp>\n";
+//     if (i < (int)ops.size()) {
+//       s += tokenToString(ops[i]->tokenType);
+//     }
+//   }
+//   return s;
+// }
+
+// std::string LOrExpNode::toString()
+// {
+//   std::string s;
+//   for (int i = 0; i < (int)lAndExpNodes.size(); i++) {
+//     s += lAndExpNodes[i]->toString();
+//     s += "<LOrExp>\n";
+//     if (i < (int)ops.size()) {
+//       s += tokenToString(ops[i]->tokenType);
+//     }
+//   }
+//   return s;
+// }
+

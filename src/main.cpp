@@ -9,7 +9,6 @@
 extern char tokenName[][20];
 extern std::vector<TokenInfo*> tokenInfoList;
 extern SymbolTable* currentSymbolTable;
-extern SymbolTable* funcTable;
 
 void getTokenTest(Lexer* lexer);
 void getAllTokenTest(Lexer* lexer);
@@ -32,8 +31,8 @@ int main(int argc, char **argv)
     Log("lexer has something error\n");
     exit(1);
   }
-  ErrorList* errorList = new ErrorList();
-  Parser* parser = new Parser(errorList);
+
+  Parser* parser = new Parser();
   parser->toString();
 
   // freopen("table.txt", "w", stdout);
