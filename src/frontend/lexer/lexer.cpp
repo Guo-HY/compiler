@@ -164,17 +164,18 @@ bool Lexer::dealFormatString(TokenInfo* tokenInfo)
     ch = fgetc(fp);
     if (formatChar && ch != 'd') {
       /* format error */
-      Log("format error : %% doesn't follow with d\n");
-      return false;
+      // Log("format error : %% doesn't follow with d\n");
+      // return false;
     }
     if (backSlash && ch != 'n') {
       /* format error */
-      Log("format error : \\ doesn't follow with n\n");
-      return false;
+      // Log("format error : \\ doesn't follow with n\n");
+      // return false;
     }
     formatChar = false;
     backSlash = false;
-  } while(ch == 32 || ch == 33 || ch == 37 || (ch >= 40 && ch <= 126));
+  } while(ch != '"'); /* format error will deal in parser */
+  // while(ch == 32 || ch == 33 || ch == 37 || (ch >= 40 && ch <= 126));
 
   if (ch != '"') {
     /* error : string is not terminate with " or string has illegal char*/

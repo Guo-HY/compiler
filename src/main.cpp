@@ -18,7 +18,7 @@ extern void allSymbolTableToString();
 
 int main(int argc, char **argv)
 {
-  FILE* fp = fopen("testfile.c", "r");
+  FILE* fp = fopen("testfile.txt", "r");
   freopen("output.txt", "w", stdout);
   bool ret;
   if (fp == NULL) {
@@ -35,8 +35,8 @@ int main(int argc, char **argv)
   Parser* parser = new Parser();
   parser->toString();
   Log("after parser");
-  freopen("table.txt", "w", stdout);
-  currentSymbolTable->toString(0);
+  // freopen("table.txt", "w", stdout);
+  // currentSymbolTable->toString(0);
 
   freopen("error.txt", "w", stdout);
   errorList.toString();

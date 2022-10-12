@@ -667,14 +667,14 @@ UnaryExpNode* Parser::unaryExpAnalyse(LValNode* lval, bool addToNFCP, std::vecto
     ret = globalSymbolTable->undefSymbolHandler(&(node->ident->str), node->ident->line);
     popToken(); /* eat IDENFR */
     popToken(); /* eat LPARENT */
-    std::vector<ObjectSymbolItem*>* funcCParams = new std::vector<ObjectSymbolItem*>;
-    if (peekToken(0)->tokenType != TokenType::RPARENT) {
+    std::vector<ObjectSymbolItem*>* thisFuncCParams = new std::vector<ObjectSymbolItem*>;
+    if (isExpFirst()) {
       node->hasFuncRParams = true;
-      node->funcRParamsNode = funcRParamsAnalyse(funcCParams);
+      node->funcRParamsNode = funcRParamsAnalyse(thisFuncCParams);
     }
     if (ret == false) {
       /* check error d, e */
-      globalSymbolTable->funcCallErrorHandler(&(node->ident->str), funcCParams, node->ident->line);
+      globalSymbolTable->funcCallErrorHandler(&(node->ident->str), thisFuncCParams, node->ident->line);
     }
     if (ret == false && addToNFCP == true) {
       /* 如果符号表中存在函数名，并且addToNFCP为真，就要在funcCParams中填入函数返回值类型 */

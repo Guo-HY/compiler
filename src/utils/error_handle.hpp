@@ -2,23 +2,8 @@
 #define _ERROR_HANDLE_H 1
 
 #include <vector>
+#include <map>
 #include "../include/error.hpp"
-class ErrorInfo;
-
-class ErrorList {
-  private:
-  std::vector<ErrorInfo*> errorInfos;
-
-  public:
-  
-  void addErrorInfo(ErrorInfo* info) {
-    Log("in addErrorInfo\n");
-    this->errorInfos.push_back(info);
-  }
-
-  void toString();
-
-};
 
 class ErrorInfo {
   public:
@@ -29,5 +14,23 @@ class ErrorInfo {
 
   ErrorInfo(int l, char e) : line(l), errorType(e) {}
 };
+
+class ErrorList {
+  private:
+  // std::vector<ErrorInfo*> errorInfos;
+  std::map<int, ErrorInfo*> errorInfos;
+
+  public:
+  
+  void addErrorInfo(ErrorInfo* info) {
+    Log("in addErrorInfo\n");
+    this->errorInfos.emplace(info->line, info);
+  }
+
+  void toString();
+
+};
+
+
 
 #endif
