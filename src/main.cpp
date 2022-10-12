@@ -9,6 +9,7 @@
 extern char tokenName[][20];
 extern std::vector<TokenInfo*> tokenInfoList;
 extern SymbolTable* currentSymbolTable;
+extern ErrorList errorList;
 
 void getTokenTest(Lexer* lexer);
 void getAllTokenTest(Lexer* lexer);
@@ -17,7 +18,7 @@ extern void allSymbolTableToString();
 
 int main(int argc, char **argv)
 {
-  FILE* fp = fopen("testfile.txt", "r");
+  FILE* fp = fopen("testfile.c", "r");
   freopen("output.txt", "w", stdout);
   bool ret;
   if (fp == NULL) {
@@ -33,10 +34,12 @@ int main(int argc, char **argv)
 
   Parser* parser = new Parser();
   parser->toString();
+  Log("after parser");
+  freopen("table.txt", "w", stdout);
+  currentSymbolTable->toString(0);
 
-  // freopen("table.txt", "w", stdout);
-  // funcTable->toString(0);
-  // currentSymbolTable->toString(0);
+  freopen("error.txt", "w", stdout);
+  errorList.toString();
 
   return 0;
 }

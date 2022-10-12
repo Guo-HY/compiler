@@ -2,7 +2,8 @@
 #define _ERROR_H 1
 
 #include <assert.h>
-
+#include <stdio.h>
+#include <stdlib.h>
 // ----------- log -----------
 
 #define ANSI_FG_BLACK   "\33[1;30m"

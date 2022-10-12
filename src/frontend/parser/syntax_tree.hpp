@@ -180,7 +180,7 @@ class VarDefNode : public AbstVarDefNode {
   InitValNode* initValNode;
   
   public:
-  VarDefNode(): initValNode(NULL) {}
+  VarDefNode(): hasInitVal(false), initValNode(NULL) {}
   std::string toString() override;
 };
 

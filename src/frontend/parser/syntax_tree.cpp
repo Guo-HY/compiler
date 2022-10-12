@@ -14,6 +14,7 @@ std::string tokenToString(TokenType t)
 
 std::string CompUnitNode::toString()
 {
+  Log("in\n");
   std::string s;
   int i;
   for (i = 0; i < (int)declNodes.size(); i++) {
@@ -29,6 +30,7 @@ std::string CompUnitNode::toString()
 
 std::string DeclNode::toString()
 {
+  Log("in\n");
   std::string s;
   if (declNodeType == DeclNodeType::DECL_CONST) {
     s += constDeclNode->toString();
@@ -42,6 +44,7 @@ std::string DeclNode::toString()
 
 std::string ConstDeclNode::toString()
 {
+  Log("in\n");
   std::string s;
   int i;
   s += tokenToString(TokenType::CONSTTK);
@@ -62,6 +65,7 @@ std::string ConstDeclNode::toString()
 
 std::string BTypeNode::toString()
 {
+  Log("in\n");
   std::string s;
   s += tokenToString(TokenType::INTTK);
   return s;
@@ -69,6 +73,7 @@ std::string BTypeNode::toString()
 
 std::string ConstDefNode::toString()
 {
+  Log("in\n");
   std::string s;
   s += tokenToString(TokenType::IDENFR);
   s += ident->str;
@@ -87,6 +92,7 @@ std::string ConstDefNode::toString()
 
 std::string ConstInitValNode::toString()
 {
+  Log("in\n");
   std::string s;
   if (initArray) {
     s += tokenToString(TokenType::LBRACE);
@@ -106,6 +112,7 @@ std::string ConstInitValNode::toString()
 
 std::string VarDeclNode::toString()
 {
+  Log("in\n");
   std::string s;
   s += bTypeNode->toString();
   s += varDefNodes[0]->toString();
@@ -120,25 +127,34 @@ std::string VarDeclNode::toString()
 
 std::string VarDefNode::toString()
 { 
+  Log("in\n");
   std::string s;
   s += tokenToString(TokenType::IDENFR);
   s += ident->str;
   s += "\n";
+  Log("in\n");
   for (int i = 0; i < (int)constExpNodes.size(); i++) {
     s += tokenToString(TokenType::LBRACK);
     s += constExpNodes[i]->toString();
     s += tokenToString(TokenType::RBRACK);
   }
+  Log("in\n");
   if (hasInitVal) {
+    Log("in\n");
+    if (initValNode == NULL) {
+      panic("error");
+    }
     s += tokenToString(TokenType::ASSIGN);
     s += initValNode->toString();
   }
+  Log("in\n");
   s += "<VarDef>\n";
   return s;
 }
 
 std::string InitValNode::toString()
 {
+  Log("in\n");
   std::string s;
   if (initArray) {
     s += tokenToString(TokenType::LBRACE);
@@ -158,6 +174,7 @@ std::string InitValNode::toString()
 
 std::string FuncDefNode::toString()
 {
+  Log("in\n");
   std::string s;
   s += funcTypeNode->toString();
   s += tokenToString(TokenType::IDENFR);
@@ -175,6 +192,7 @@ std::string FuncDefNode::toString()
 
 std::string MainFuncDefNode::toString()
 {
+  Log("in\n");
   std::string s;  
   s += tokenToString(TokenType::INTTK);
   s += tokenToString(TokenType::MAINTK);
@@ -187,6 +205,7 @@ std::string MainFuncDefNode::toString()
 
 std::string FuncTypeNode::toString()
 {
+  Log("in\n");
   std::string s;
   s += tokenToString(funcType->tokenType);
   s += "<FuncType>\n";
@@ -195,6 +214,7 @@ std::string FuncTypeNode::toString()
 
 std::string FuncFParamsNode::toString()
 {
+  Log("in\n");
   std::string s;
   s += funcFParamNodes[0]->toString();
   for (int i = 1; i < (int)funcFParamNodes.size(); i++) {
@@ -207,6 +227,7 @@ std::string FuncFParamsNode::toString()
 
 std::string FuncFParamNode::toString()
 {
+  Log("in\n");
   std::string s;
   s += bTypeNode->toString();
   s += tokenToString(TokenType::IDENFR);
@@ -227,6 +248,7 @@ std::string FuncFParamNode::toString()
 
 std::string BlockNode::toString()
 {
+  Log("in\n");
   std::string s;
   s += tokenToString(TokenType::LBRACE);
   for (int i = 0; i < (int)blockItemNodes.size(); i++) {
@@ -239,6 +261,7 @@ std::string BlockNode::toString()
 
 std::string BlockItemNode::toString()
 {
+  Log("in\n");
   std::string s;
   if (blockItemType == BlockItemType::BLOCKITEM_DECL) {
     s += declNode->toString();
@@ -250,6 +273,7 @@ std::string BlockItemNode::toString()
 
 std::string StmtNode::toString()
 {
+  Log("in\n");
   std::string s;
   switch (stmtType)
   {
@@ -332,6 +356,7 @@ std::string StmtNode::toString()
 
 std::string ExpNode::toString()
 {
+  Log("in\n");
   std::string s;
   s += addExpNode->toString();
   s += "<Exp>\n";
@@ -340,6 +365,7 @@ std::string ExpNode::toString()
 
 std::string CondNode::toString()
 {
+  Log("in\n");
   std::string s;
   s += lOrExpNode->toString();
   s += "<Cond>\n";
@@ -348,6 +374,7 @@ std::string CondNode::toString()
 
 std::string LValNode::toString()
 {
+  Log("in\n");
   std::string s;
   s += tokenToString(TokenType::IDENFR);
   s += ident->str;
@@ -363,6 +390,7 @@ std::string LValNode::toString()
 
 std::string PrimaryExpNode::toString()
 {
+  Log("in\n");
   std::string s;
   switch (primaryExpType)
   {
@@ -387,6 +415,7 @@ std::string PrimaryExpNode::toString()
 
 std::string NumberNode::toString()
 {
+  Log("in\n");
   std::string s;
   s += tokenToString(TokenType::INTCON);
   s += intConst->str;
@@ -397,6 +426,7 @@ std::string NumberNode::toString()
 
 std::string UnaryExpNode::toString()
 {
+  Log("in\n");
   std::string s;
   switch (unaryExpType)
   {
@@ -427,6 +457,7 @@ std::string UnaryExpNode::toString()
 
 std::string UnaryOpNode::toString()
 {
+  Log("in\n");
   std::string s;
   s += tokenToString(unaryOp->tokenType);
   s += "<UnaryOp>\n";
@@ -435,6 +466,7 @@ std::string UnaryOpNode::toString()
 
 std::string FuncRParamsNode::toString()
 {
+  Log("in\n");
   std::string s;
   s += expNodes[0]->toString();
   for (int i = 1; i < (int)expNodes.size(); i++) {
@@ -447,6 +479,7 @@ std::string FuncRParamsNode::toString()
 
 std::string BinaryExpNode::toString()
 {
+  Log("in\n");
   std::string s;
   for (int i = 0; i < (int)operands.size(); i++) {
     s += operands[i]->toString();
@@ -475,6 +508,7 @@ std::string BinaryExpNode::toString()
 
 std::string MulExpNode::toString()
 {
+  Log("in\n");
   std::string s;
   for (int i = 0; i < (int)unaryExpNodes.size(); i++) {
     s += unaryExpNodes[i]->toString();
@@ -488,6 +522,7 @@ std::string MulExpNode::toString()
 
 std::string ConstExpNode::toString()
 {
+  Log("in\n");
   std::string s;
   s += addExpNode->toString();
   s += "<ConstExp>\n";

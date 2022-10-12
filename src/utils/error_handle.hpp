@@ -2,6 +2,7 @@
 #define _ERROR_HANDLE_H 1
 
 #include <vector>
+#include "../include/error.hpp"
 class ErrorInfo;
 
 class ErrorList {
@@ -11,8 +12,11 @@ class ErrorList {
   public:
   
   void addErrorInfo(ErrorInfo* info) {
+    Log("in addErrorInfo\n");
     this->errorInfos.push_back(info);
   }
+
+  void toString();
 
 };
 

@@ -66,9 +66,6 @@ class SymbolTable {
 
   FuncSymbolItem* funcDefNode2FuncSymbolItem(SyntaxNode* node);
   ObjectSymbolItem* abstVarDefNode2ObjectSymbolItem(AbstVarDefNode* node);
-  // ObjectSymbolItem* funcFParamNode2ObjectSymbolItem(SyntaxNode* node);
-  // ObjectSymbolItem* constDefNode2ObjectSymbolItem(SyntaxNode* node);
-  // ObjectSymbolItem* varDefNode2ObjectSymbolItem(SyntaxNode* node);
 
 };
 
