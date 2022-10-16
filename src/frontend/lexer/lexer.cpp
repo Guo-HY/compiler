@@ -1,6 +1,6 @@
 #include "lexer.hpp"
 #include <stdlib.h>
-#include "../include/error.hpp"
+#include "../../include/error.hpp"
 
 std::unordered_map<std::string, TokenType> reservedTable {
   {"main",    MAINTK},

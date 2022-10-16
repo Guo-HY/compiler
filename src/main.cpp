@@ -5,7 +5,7 @@
 #include "frontend/parser/symbol_table.hpp"
 #include "utils/error_handle.hpp"
 #include "utils/test.hpp"
-#include <error.hpp>
+#include "include/error.hpp"
 
 extern SymbolTable* currentSymbolTable;
 extern ErrorList errorList;

@@ -1,5 +1,5 @@
 #include "parser.hpp"
-#include "../include/error.hpp"
+#include "../../include/error.hpp"
 
 extern char tokenName[][20];
 extern char tokenValue[][20];
