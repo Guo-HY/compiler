@@ -46,7 +46,7 @@ enum TokenType {
   RBRACE,
   END,
 };
-/* TODO : 改成类 */
+
 struct TokenInfo {
   TokenType tokenType;
   std::string str;
@@ -59,7 +59,6 @@ class Lexer {
 
   Lexer(FILE *fp) {
     if (fp == NULL) {
-      /* TODO : error handle*/
       this->ch = EOF;
     }
     this->fp = fp;
@@ -69,8 +68,9 @@ class Lexer {
 
   bool getToken(TokenInfo* tokenInfo);
   bool getAllToken();
-  private:
 
+  private:
+  
   char ch;
   FILE* fp;
   int line;

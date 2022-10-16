@@ -17,11 +17,9 @@ class ErrorInfo {
 
 class ErrorList {
   private:
-  // std::vector<ErrorInfo*> errorInfos;
   std::map<int, ErrorInfo*> errorInfos;
 
   public:
-  
   void addErrorInfo(ErrorInfo* info) {
     Log("in addErrorInfo\n");
     this->errorInfos.emplace(info->line, info);

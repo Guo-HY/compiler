@@ -102,6 +102,7 @@ bool Parser::errorMHandler(int line)
 CompUnitNode* Parser::compUnitAnalyse() 
 {
   Log("in compUnitAnalyse\n");
+  /* 初始化符号表 */
   symbolTableInit();
   CompUnitNode* node = new CompUnitNode();
   /* deal Decl : CONSTTK | INTTK IDENFR !LPARENT */ 
@@ -126,10 +127,12 @@ DeclNode* Parser::declAnalyse()
 {
   Log("in declAnalyse\n");
   DeclNode* node = new DeclNode();
+  /* deal ConstDecl : CONSTTK */
   if (peekToken(0)->tokenType == TokenType::CONSTTK) {
     node->declNodeType = DeclNodeType::DECL_CONST;
     node->constDeclNode = constDeclAnalyse();
   } else {
+    /* deal VarDecl : INTTK */
     node->declNodeType = DeclNodeType::DECL_VAR;
     node->varDeclNode = varDeclAnalyse();
   }
@@ -143,6 +146,7 @@ ConstDeclNode* Parser::constDeclAnalyse()
   popToken(); /* eat CONSTTK */
   node->bTypeNode = bTypeAnalyse();
   node->constDefNodes.push_back(constDefAnalyse(node->bTypeNode));
+  /* deal { ',' ConstDef }  */
   while (peekToken(0)->tokenType == TokenType::COMMA) {
     popToken(); /* eat COMMA */
     node->constDefNodes.push_back(constDefAnalyse(node->bTypeNode));
@@ -190,6 +194,7 @@ ConstInitValNode* Parser::constInitValAnalyse()
 { 
   Log("in constInitValAnalyse\n");
   ConstInitValNode* node = new ConstInitValNode();
+  /* deal '{' [ ConstInitVal { ',' ConstInitVal } ] '}' */
   if (peekToken(0)->tokenType == TokenType::LBRACE) {
     node->initArray = true;
     popToken(); /* eat LBRACE */
@@ -205,6 +210,7 @@ ConstInitValNode* Parser::constInitValAnalyse()
     popToken(); /* eat RBRACE */
     return node;
   }
+  /* deal ConstExp */
   node->initArray = false;
   node->constExpNode = constExpAnalyse();
   return node;
@@ -216,6 +222,7 @@ VarDeclNode* Parser::varDeclAnalyse()
   VarDeclNode* node = new VarDeclNode();
   node->bTypeNode = bTypeAnalyse();
   node->varDefNodes.push_back(varDefAnalyse(node->bTypeNode));
+  /* deal { ',' VarDef } */
   while (peekToken(0)->tokenType == TokenType::COMMA) {
     popToken(); /* eat COMMA */
     node->varDefNodes.push_back(varDefAnalyse(node->bTypeNode));
@@ -232,6 +239,7 @@ VarDefNode* Parser::varDefAnalyse(BTypeNode* bType)
   node->bTypeNode = bType;
   node->ident = peekToken(0);
   popToken(); /* eat IDENFR */
+  /* deal { '[' ConstExp ']' } */
   while (peekToken(0)->tokenType == TokenType::LBRACK) {
     popToken(); /* eat LBRACK */
     (node->arrayDimension)++;
@@ -239,6 +247,7 @@ VarDefNode* Parser::varDefAnalyse(BTypeNode* bType)
     /* check if lack RBRACK ,if not lack then eat */
     tokenLackHandler(TokenType::RBRACK);
   } 
+  /* deal [ '=' InitVal ] */
   if (peekToken(0)->tokenType == TokenType::ASSIGN) {
     popToken(); /* eat ASSIGN */
     node->hasInitVal = true;
@@ -255,6 +264,7 @@ InitValNode* Parser::initValAnalyse()
 {
   Log("in initValAnalyse\n");
   InitValNode* node = new InitValNode();
+  /* deal '{' [ InitVal { ',' InitVal } ] '}' */
   if (peekToken(0)->tokenType == TokenType::LBRACE) {
     popToken(); /* eat LBRACE */
     node->initArray = true;
@@ -270,6 +280,7 @@ InitValNode* Parser::initValAnalyse()
     popToken(); /* eat RBRACE */
     return node;
   }
+  /* deal Exp */
   node->initArray = false;
   node->expNode = expAnalyse(NULL, false, NULL);
   return node;
@@ -286,6 +297,7 @@ FuncDefNode* Parser::funcDefAnalyse()
   node->ident = peekToken(0);
   popToken(); /* eat IDENFR */
   popToken(); /* eat LPARENT */
+  /* deal [FuncFParams] */
   if (peekToken(0)->tokenType == TokenType::INTTK) {
     node->funcFParamsNode = funcFParamsAnalyse();
     node->hasFuncFParams = true;
@@ -295,7 +307,7 @@ FuncDefNode* Parser::funcDefAnalyse()
 
   /* insert symbol to globalSymbolTable 需要在解析block前，解析形参后将函数插入符号表 */
   globalSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SyntaxNodeType::FUNC_SNT);
-
+  /* deal Block */
   node->blockNode = blockAnalyse(false, &(node->ident->str), 
   (node->funcTypeNode->funcType->tokenType == INTTK));
   /* 回溯符号表 */
@@ -319,7 +331,7 @@ MainFuncDefNode* Parser::mainFuncDefAnalyse()
 
   /* insert symbol to globalSymbolTable 需要在解析block前，解析形参后将函数插入符号表 */
   globalSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SyntaxNodeType::FUNC_SNT);
-  
+  /* deal Block */
   node->blockNode = blockAnalyse(false, &(node->ident->str), true);
   /* 回溯符号表 */
   currentSymbolTable = currentSymbolTable->findParent();
@@ -340,6 +352,7 @@ FuncFParamsNode* Parser::funcFParamsAnalyse()
   Log("in funcFParamsAnalyse\n");
   FuncFParamsNode* node = new FuncFParamsNode();
   node->funcFParamNodes.push_back(FuncFParamAnalyse());
+  /* deal { ',' FuncFParam } */
   while (peekToken(0)->tokenType == TokenType::COMMA) {
     popToken(); /* eat COMMA */
     node->funcFParamNodes.push_back(FuncFParamAnalyse());
@@ -402,6 +415,7 @@ BlockItemNode* Parser::blockItemAnalyse(std::string* funcName, bool* hasRE)
 {
   Log("in blockItemAnalyse\n");
   BlockItemNode* node = new BlockItemNode();
+  /* deal Decl */
   if (peekToken(0)->tokenType == TokenType::CONSTTK || 
     peekToken(0)->tokenType == TokenType::INTTK) {
       node->blockItemType = BlockItemType::BLOCKITEM_DECL;
@@ -409,6 +423,7 @@ BlockItemNode* Parser::blockItemAnalyse(std::string* funcName, bool* hasRE)
       *hasRE = false;
       return node;
     }
+  /* deal Stmt */
   node->blockItemType = BlockItemType::BLOCKITEM_STMT;
   node->stmtNode = stmtAnalyse(funcName, hasRE);
   return node;
@@ -435,9 +450,10 @@ StmtNode* Parser::stmtAnalyse(std::string* funcName, bool* hasRE)
   TokenType t = peekToken(0)->tokenType;
   
   if (t == TokenType::PRINTFTK) {
-    int fNum = 0;
-    int pLine = peekToken(0)->line;
+    /* deal 'printf' '(' FormatString{ ',' Exp} ')' ';' */
     node->stmtType = StmtType::STMT_PRINTF;
+    int fNum = 0; /* 解析到的参数个数 */
+    int pLine = peekToken(0)->line; /* printf的行号 */
     popToken(); /* eat PRINTFTK */
     popToken(); /* eat LPARENT */
     node->formatString = peekToken(0);
@@ -453,11 +469,12 @@ StmtNode* Parser::stmtAnalyse(std::string* funcName, bool* hasRE)
     tokenLackHandler(TokenType::RPARENT);
     /* check if lack SEMICN if not lack then eat */
     tokenLackHandler(TokenType::SEMICN);
-  } else if (t == TokenType::RETURNTK) { 
+  } else if (t == TokenType::RETURNTK) {
+    /* deal 'return' [Exp] ';' */ 
     node->stmtType = StmtType::STMT_RETURN;
-    int rLine = peekToken(0)->line;
+    int rLine = peekToken(0)->line; /* return的行号 */
     popToken(); /* eat RETURNTK */
-    if (isExpFirst()) {
+    if (isExpFirst()) { /* 存在Exp */
       node->expNodes.push_back(expAnalyse(NULL, false, NULL));
       /* check error f */
       globalSymbolTable->funcReturnCheck(funcName, true, rLine);
@@ -466,28 +483,32 @@ StmtNode* Parser::stmtAnalyse(std::string* funcName, bool* hasRE)
     /* check if lack SEMICN ,if not lack then eat */
     tokenLackHandler(TokenType::SEMICN);
   } else if (t == TokenType::BREAKTK) {
-    errorMHandler(peekToken(0)->line);
+    /* deal 'break' ';' */
     node->stmtType = StmtType::STMT_BREAK;
+    errorMHandler(peekToken(0)->line);
     popToken(); /* eat BREAKTK */
     /* check if lack SEMICN ,if not lack then eat */
     tokenLackHandler(TokenType::SEMICN);
   } else if (t == TokenType::CONTINUETK) {
+    /* deal 'continue' ';' */
     errorMHandler(peekToken(0)->line);
     node->stmtType = StmtType::STMT_CONTINUE;
     popToken(); /* eat CONTINUETK */
     /* check if lack SEMICN ,if not lack then eat */
     tokenLackHandler(TokenType::SEMICN);
   } else if (t == TokenType::WHILETK) {
-    cycleDepth++;
+    /* deal 'while' '(' Cond ')' Stmt */
     node->stmtType = StmtType::STMT_WHILE;
+    cycleDepth++; /* 所处循环层数+1 */
     popToken(); /* eat WHILETK */
     popToken(); /* eat LPARENT */
     node->condNode = condAnalyse();
     /* check if lack RPARENT ,if not lack then eat */
     tokenLackHandler(TokenType::RPARENT);
     node->stmtNodes.push_back(stmtAnalyse(funcName, &tmpRE));
-    cycleDepth--;
+    cycleDepth--; /* 退出时循环层数-1 */
   } else if (t == TokenType::IFTK) {
+    /* deal 'if' '(' Cond ')' Stmt [ 'else' Stmt ] */
     node->stmtType = StmtType::STMT_IF;
     popToken(); /* eat IFTK */
     popToken(); /* eat LPARENT */
@@ -501,6 +522,7 @@ StmtNode* Parser::stmtAnalyse(std::string* funcName, bool* hasRE)
       node->stmtNodes.push_back(stmtAnalyse(funcName, &tmpRE));
     }
   } else if (t == TokenType::LBRACE) {
+    /* deal Block */
     node->stmtType = StmtType::STMT_BLOCK;
     node->blockNode = blockAnalyse(true, funcName, false);
 
@@ -512,6 +534,7 @@ StmtNode* Parser::stmtAnalyse(std::string* funcName, bool* hasRE)
     */
   } else if (peekToken(0)->tokenType == TokenType::IDENFR && 
              peekToken(1)->tokenType != TokenType::LPARENT) {
+    /* 此时一定是一个LVal，先解析出来 */
     LValNode* lValNodeTmp = lValAnalyse();
     if (peekToken(0)->tokenType == TokenType::ASSIGN) { /* LVal '=' Exp ';' */
       /* check error h */
@@ -551,7 +574,8 @@ StmtNode* Parser::stmtAnalyse(std::string* funcName, bool* hasRE)
   return node;
 }
 
-ExpNode* Parser::expAnalyse(LValNode* lval, bool addToNFCP, std::vector<ObjectSymbolItem*>* funcCParams)
+ExpNode* Parser::expAnalyse(LValNode* lval, bool addToNFCP, 
+  std::vector<ObjectSymbolItem*>* funcCParams)
 {
   Log("in expAnalyse\n");
   ExpNode* node = new ExpNode();
@@ -572,9 +596,9 @@ LValNode* Parser::lValAnalyse()
   Log("in lValAnalyse\n");
   LValNode* node = new LValNode();
   node->ident = peekToken(0);
+  popToken(); /* eat IDENFR */
   /* check error c */
   currentSymbolTable->undefSymbolHandler(&(node->ident->str), node->ident->line);
-  popToken(); /* eat IDENFR */
   while (peekToken(0)->tokenType == TokenType::LBRACK) {
     popToken(); /* eat LBRACK */
     node->expNodes.push_back(expAnalyse(NULL, false, NULL));
@@ -584,7 +608,8 @@ LValNode* Parser::lValAnalyse()
   return node;
 }
 
-PrimaryExpNode* Parser::primaryExpAnalyse(LValNode* lval, bool addToNFCP, std::vector<ObjectSymbolItem*>* funcCParams)
+PrimaryExpNode* Parser::primaryExpAnalyse(LValNode* lval, bool addToNFCP, 
+  std::vector<ObjectSymbolItem*>* funcCParams)
 {   
   Log("in primaryExpAnalyse\n");
   PrimaryExpNode* node = new PrimaryExpNode();
@@ -601,14 +626,14 @@ PrimaryExpNode* Parser::primaryExpAnalyse(LValNode* lval, bool addToNFCP, std::v
   TokenType t = peekToken(0)->tokenType;
   switch (t)
   {
-  case TokenType::LPARENT:
+  case TokenType::LPARENT:  /* deal '(' Exp ')' */
     node->primaryExpType = PrimaryExpType::PRIMARY_EXP;
     popToken(); /* eat LPARENT */
     node->expNode = expAnalyse(NULL, addToNFCP, funcCParams);
     /* check if lack RPARENT ,if not lack then eat */
     tokenLackHandler(TokenType::RPARENT);
     break;
-  case TokenType::IDENFR:
+  case TokenType::IDENFR: /* deal LVal */
     node->primaryExpType = PrimaryExpType::PRIMARY_LVAL;
     node->lValNode = lValAnalyse();
     if (addToNFCP == true) {
@@ -616,7 +641,7 @@ PrimaryExpNode* Parser::primaryExpAnalyse(LValNode* lval, bool addToNFCP, std::v
       funcCParams->push_back(currentSymbolTable->getLValType(node->lValNode));
     }
     break;
-  case TokenType::INTCON:
+  case TokenType::INTCON: /* deal Number */
     node->primaryExpType = PrimaryExpType::PRIMARY_NUMBER;
     node->numberNode = numberAnalyse();
     if (addToNFCP == true) {
@@ -640,7 +665,8 @@ NumberNode* Parser::numberAnalyse()
   return node;
 }
 
-UnaryExpNode* Parser::unaryExpAnalyse(LValNode* lval, bool addToNFCP, std::vector<ObjectSymbolItem*>* funcCParams)
+UnaryExpNode* Parser::unaryExpAnalyse(LValNode* lval, bool addToNFCP, 
+  std::vector<ObjectSymbolItem*>* funcCParams)
 {
   Log("in unaryExpAnalyse\n");
   bool ret;
@@ -650,6 +676,7 @@ UnaryExpNode* Parser::unaryExpAnalyse(LValNode* lval, bool addToNFCP, std::vecto
     node->primaryExpNode = primaryExpAnalyse(lval, addToNFCP, funcCParams);
     return node;
   }
+  /* deal UnaryOp UnaryExp */
   if (peekToken(0)->tokenType == TokenType::PLUS || 
       peekToken(0)->tokenType == TokenType::MINU ||
       peekToken(0)->tokenType == TokenType::NOT) 
@@ -658,12 +685,13 @@ UnaryExpNode* Parser::unaryExpAnalyse(LValNode* lval, bool addToNFCP, std::vecto
     node->unaryOpNode = unaryOpAnalyse();
     node->unaryExpNode = unaryExpAnalyse(NULL, addToNFCP, funcCParams);
   } 
+  /* deal Ident '(' [FuncRParams] ')' */
   else if (peekToken(0)->tokenType == TokenType::IDENFR && 
            peekToken(1)->tokenType == TokenType::LPARENT) 
   {
     node->unaryExpType = UnaryExpType::UNARY_FUNCCALL;
     node->ident = peekToken(0);
-    /* check error c ,需要在全局符号表中查找 */
+    /* check error c ,需要在全局符号表中查找,未找到返回true */
     ret = globalSymbolTable->undefSymbolHandler(&(node->ident->str), node->ident->line);
     popToken(); /* eat IDENFR */
     popToken(); /* eat LPARENT */
@@ -683,6 +711,7 @@ UnaryExpNode* Parser::unaryExpAnalyse(LValNode* lval, bool addToNFCP, std::vecto
     /* check if lack RPARENT ,if not lack then eat */
     tokenLackHandler(TokenType::RPARENT);
   } 
+  /* deal PrimaryExp */
   else 
   {
     node->unaryExpType = UnaryExpType::UNARY_PRIMARYEXP;
