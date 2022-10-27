@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 // ----------- log -----------
-// #define ENABLE_LOG 1
+#define ENABLE_LOG 1
 
 #define ANSI_FG_BLACK   "\33[1;30m"
 #define ANSI_FG_RED     "\33[1;31m"

@@ -22,62 +22,14 @@ char symbolTypeName[][20] {
   "FUNC",
 };
 
-bool SymbolTable::insertSymbol(std::string* symbolName, SymbolItem* symbolItem)
+void symbolTableInit()
 {
-  Log("in insertSymbol\n");
-  /* 全局符号表中变量名前加 @V@ ，函数名前加 @F@ ，以示区别 */
-  // if (this->isTop) {
-  //   if (this->symbols.count("@F@" + *symbolName) != 0 ||
-  //       this->symbols.count("@V@" + *symbolName) != 0) {
-  //     Log("error : currentSymbolTable already has symbol %s\n", symbolName->c_str());
-  //     errorList.addErrorInfo(new ErrorInfo(symbolItem->line, 'b'));
-  //     return false;
-  //   }
-  //   if (symbolItem->symbolType == SymbolType::FUNC) {
-  //     this->symbols["@F@" + *symbolName] = symbolItem;
-  //   } else {
-  //     this->symbols["@V@" + *symbolName] = symbolItem;
-  //   }
-  //   return true;
-  // }
-  if (this->symbols.count(*symbolName) != 0) {
-    Log("error : currentSymbolTable already has symbol %s\n", symbolName->c_str());
-    errorList.addErrorInfo(new ErrorInfo(symbolItem->line, 'b'));
-    return false;
-  }
-  this->symbols[*symbolName] = symbolItem;
-  return true;
-}
-
-SymbolItem* SymbolTable::findSymbol(std::string* symbolName)
-{
-  Log("in findSymbol\n");
-  // if (this->isTop) {
-  //   if (this->symbols.count("@F@" + *symbolName) != 0) {
-  //     return this->symbols["@F@" + *symbolName];
-  //   } 
-  //   if (this->symbols.count("@V@" + *symbolName) != 0) {
-  //     return this->symbols["@V@" + *symbolName];
-  //   }
-  //   return NULL;
-  // }
-  if (this->symbols.count(*symbolName) == 0) {
-    if (this->parent == NULL) {
-      return NULL;
-    }
-    return this->parent->findSymbol(symbolName);
-  }
-  return this->symbols[*symbolName];
-}
-
-bool SymbolTable::undefSymbolHandler(std::string* symbolName, int line) 
-{
-  Log("in undefSymbolHandler\n");
-  if (findSymbol(symbolName) == NULL) {
-    errorList.addErrorInfo(new ErrorInfo(line, 'c'));
-    return true;
-  }
-  return false;
+  /* TODO: 需要检查，当symbolTable不为NULL时需要delete，防止内存泄露 */
+  Log("in symbolTableInit\n");
+  currentSymbolTable = new SymbolTable(0);
+  allSymbolTable[0] = currentSymbolTable;
+  currentTableId = 0;
+  globalSymbolTable = currentSymbolTable;
 }
 
 SymbolTable* SymbolTable::newSon()
@@ -100,7 +52,31 @@ SymbolTable* SymbolTable::findParent()
   return this->parent;
 }
 
-void SymbolTable::insertNode(std::string* symbolName, SyntaxNode* node, SyntaxNodeType type)
+bool SymbolTable::insertSymbol(std::string* symbolName, SymbolItem* symbolItem)
+{
+  Log("in insertSymbol\n");
+  if (this->name2symbols.count(*symbolName) != 0) {
+    Log("error : currentSymbolTable already has symbol %s\n", symbolName->c_str());
+    errorList.addErrorInfo(new ErrorInfo(symbolItem->line, 'b'));
+    return false;
+  }
+  this->name2symbols[*symbolName] = symbolItem;
+  return true;
+}
+
+SymbolItem* SymbolTable::findSymbol(std::string* symbolName)
+{
+  Log("in findSymbol\n");
+  if (this->name2symbols.count(*symbolName) == 0) {
+    if (this->parent == NULL) {
+      return NULL;
+    }
+    return this->parent->findSymbol(symbolName);
+  }
+  return this->name2symbols[*symbolName];
+}
+
+SymbolItem* SymbolTable::insertNode(std::string* symbolName, SyntaxNode* node, SyntaxNodeType type)
 {
   Log("in insertNode\n");
   SymbolItem* item;
@@ -110,6 +86,19 @@ void SymbolTable::insertNode(std::string* symbolName, SyntaxNode* node, SyntaxNo
     item = abstVarDefNode2ObjectSymbolItem((AbstVarDefNode*)node);
   }
   insertSymbol(symbolName, item);
+  return item;
+}
+
+SymbolItem* SymbolTable::insertNodeWithLlvmIrId(std::string* symbolName, SyntaxNode* node, SyntaxNodeType type, int id)
+{
+  Log("");
+  SymbolItem* item = insertNode(symbolName, node, type);
+  item->llvmIrId = id;
+  if (this->id2symbols.count(id) != 0) {
+    panic("error");
+  }
+  this->id2symbols[id] = item;
+  return item;
 }
 
 FuncSymbolItem* SymbolTable::funcDefNode2FuncSymbolItem(SyntaxNode* node) 
@@ -138,7 +127,9 @@ ObjectSymbolItem* SymbolTable::abstVarDefNode2ObjectSymbolItem(AbstVarDefNode* n
 {
   Log("in abstVarDefNode2ObjectSymbolItem\n");
   ObjectSymbolItem* objectItem = new ObjectSymbolItem();
+  Log("before");
   objectItem->line = node->ident->line;
+  Log("after");
   objectItem->isConst = node->isConst;
   if (node->arrayDimension == 0) {
     objectItem->symbolType = SymbolType::INT_ST;
@@ -148,87 +139,6 @@ ObjectSymbolItem* SymbolTable::abstVarDefNode2ObjectSymbolItem(AbstVarDefNode* n
   objectItem->dimension = node->arrayDimension;
   return objectItem;
 }
-
-void SymbolTable::toString(int tabNum)
-{
-  Log("in SymbolTable::toString\n");
-  tprintf(tabNum,"############################\n");
-  tprintf(tabNum, "symbol table id = %d\n", this->tableId);
-  if (this->parent != NULL) {
-    tprintf(tabNum, "symbol table parent id = %d\n", this->parent->tableId);
-  } else {
-    tprintf(tabNum, "this is top table\n");
-  }
-  tprintf(tabNum, "----------------------------\n");
-  std::unordered_map<std::string, SymbolItem*>::iterator iter;
-  for (iter = this->symbols.begin(); iter != this->symbols.end(); iter++) {
-    tprintf(tabNum, "symbol name=%s\tsymbol type=%s ", iter->first.c_str(), symbolTypeName[iter->second->symbolType]);
-    if (iter->second->symbolType == SymbolType::FUNC_ST) {
-      FuncSymbolItem* f = (FuncSymbolItem*)iter->second;
-      printf("return type=%s ", symbolTypeName[f->returnType]);
-      for (int i = 0; i < f->funcFParams.size(); i++) {
-        ObjectSymbolItem* o = (ObjectSymbolItem*)(f->funcFParams[i]);
-        printf("param%d: const=%d,dim=%d",i, o->isConst, o->dimension);
-      }
-      printf("\n");
-    } else {
-      ObjectSymbolItem* o = (ObjectSymbolItem*)iter->second;
-      printf("const=%d,dim=%d\n", o->isConst, o->dimension);
-    }
-  }
-  tprintf(tabNum,"############################\n");
-  for (int i = 0; i < this->childs.size(); i++) {
-    this->childs[i]->toString(tabNum + 1 * TAB_LINE);
-  }
-}
-
-void symbolTableInit()
-{
-  Log("in symbolTableInit\n");
-  currentSymbolTable = new SymbolTable(0);
-  allSymbolTable[0] = currentSymbolTable;
-  currentTableId = 0;
-  globalSymbolTable = currentSymbolTable;
-}
-
-void allSymbolTableToString()
-{
-  Log("in allSymbolTableToString\n");
-  printf("we have %d tables\n", (int)allSymbolTable.size());
-  std::map<int, SymbolTable*>::iterator iter;
-  for (iter = allSymbolTable.begin(); iter != allSymbolTable.end(); iter++) {
-    iter->second->toString(0);
-  }
-}
-
-bool SymbolTable::funcCallErrorHandler(std::string* funcName, 
-  std::vector<ObjectSymbolItem*>* funcCParams, int line)
-{
-  Log("in funcCallErrorHandler\n");
-  FuncSymbolItem* f = (FuncSymbolItem*)this->findSymbol(funcName);
-  if (f == NULL) {
-    return false;
-  }
-  int rNum = 0;
-  for (int i = 0; i < funcCParams->size(); i++) {
-    if ((*funcCParams)[i]->symbolType != SymbolType::NONE_ST) {
-      rNum++;
-    }
-  }
-  if (rNum != f->funcFParams.size()) {
-    /* 函数参数个数不匹配 */
-    errorList.addErrorInfo(new ErrorInfo(line, 'd'));
-    return true;
-  }
-  for (int i = 0; i < funcCParams->size(); i++) {
-    if (!(*funcCParams)[i]->equals(f->funcFParams[i])) {
-      /* 函数参数类型存在不匹配 */
-      errorList.addErrorInfo(new ErrorInfo(line, 'e'));
-      return true;
-    }
-  }
-  return false;
-} 
 
 ObjectSymbolItem* SymbolTable::getFuncReturnType(std::string* funcName)
 {
@@ -276,6 +186,96 @@ ObjectSymbolItem* SymbolTable::getNumberType()
   return o;
 }
 
+// void SymbolTable::setLlvmIrId(std::string* symbolName, int id)
+// {
+//   SymbolItem* item = this->findSymbol(symbolName);
+//   if (item == NULL || (item->symbolType != SymbolType::ARRAY_ST && item->symbolType != SymbolType::INT_ST)) {
+//     panic("error");
+//   }
+//   ObjectSymbolItem* oitem = (ObjectSymbolItem*)item;
+//   oitem->llvmIrId = id;
+// }
+
+int SymbolTable::getLlvmIrId(std::string* symbolName)
+{
+  SymbolItem* item = this->findSymbol(symbolName);
+  // if (item == NULL || (item->symbolType != SymbolType::ARRAY_ST && item->symbolType != SymbolType::INT_ST)) {
+  //   panic("error");
+  // }
+  return item->llvmIrId;
+}
+
+SymbolItem* SymbolTable::findSymbolByLlvmIrId(int id)
+{
+  if (this->id2symbols.count(id) != 0) {
+    return this->id2symbols[id];
+  }
+  if (this->parent == NULL) {
+    panic("error");
+  }
+  return this->parent->findSymbolByLlvmIrId(id);
+}
+
+void SymbolTable::updateLlvmIrIdById(int oldId, int newId)
+{
+  SymbolItem* item = findSymbolByLlvmIrId(oldId);
+  if (item == NULL ) {
+    panic("error");
+  }
+  item->llvmIrId = newId;
+}
+
+/* ----------------------------- error handler & toString ----------------------------- */
+
+bool SymbolTable::undefSymbolHandler(std::string* symbolName, int line) 
+{
+  Log("in undefSymbolHandler\n");
+  if (findSymbol(symbolName) == NULL) {
+    errorList.addErrorInfo(new ErrorInfo(line, 'c'));
+    return true;
+  }
+  return false;
+}
+
+void allSymbolTableToString()
+{
+  Log("in allSymbolTableToString\n");
+  printf("we have %d tables\n", (int)allSymbolTable.size());
+  std::map<int, SymbolTable*>::iterator iter;
+  for (iter = allSymbolTable.begin(); iter != allSymbolTable.end(); iter++) {
+    iter->second->toString(0);
+  }
+}
+
+bool SymbolTable::funcCallErrorHandler(std::string* funcName, 
+  std::vector<ObjectSymbolItem*>* funcCParams, int line)
+{
+  Log("in funcCallErrorHandler\n");
+  FuncSymbolItem* f = (FuncSymbolItem*)this->findSymbol(funcName);
+  if (f == NULL) {
+    return false;
+  }
+  int rNum = 0;
+  for (u_long i = 0; i < funcCParams->size(); i++) {
+    if ((*funcCParams)[i]->symbolType != SymbolType::NONE_ST) {
+      rNum++;
+    }
+  }
+  if (rNum != (int)f->funcFParams.size()) {
+    /* 函数参数个数不匹配 */
+    errorList.addErrorInfo(new ErrorInfo(line, 'd'));
+    return true;
+  }
+  for (u_long i = 0; i < funcCParams->size(); i++) {
+    if (!(*funcCParams)[i]->equals(f->funcFParams[i])) {
+      /* 函数参数类型存在不匹配 */
+      errorList.addErrorInfo(new ErrorInfo(line, 'e'));
+      return true;
+    }
+  }
+  return false;
+} 
+
 bool SymbolTable::funcReturnCheck(std::string* funcName, bool hasReturnExp, int line)
 {
   Log("in funcReturnCheck\n");
@@ -303,4 +303,37 @@ bool SymbolTable::constModifyCheck(LValNode* node)
     return true;
   }
   return false;
+}
+
+void SymbolTable::toString(int tabNum)
+{
+  Log("in SymbolTable::toString\n");
+  tprintf(tabNum,"############################\n");
+  tprintf(tabNum, "symbol table id = %d\n", this->tableId);
+  if (this->parent != NULL) {
+    tprintf(tabNum, "symbol table parent id = %d\n", this->parent->tableId);
+  } else {
+    tprintf(tabNum, "this is top table\n");
+  }
+  tprintf(tabNum, "----------------------------\n");
+  std::unordered_map<std::string, SymbolItem*>::iterator iter;
+  for (iter = this->name2symbols.begin(); iter != this->name2symbols.end(); iter++) {
+    tprintf(tabNum, "symbol name=%s\tsymbol type=%s ", iter->first.c_str(), symbolTypeName[iter->second->symbolType]);
+    if (iter->second->symbolType == SymbolType::FUNC_ST) {
+      FuncSymbolItem* f = (FuncSymbolItem*)iter->second;
+      printf("return type=%s ", symbolTypeName[f->returnType]);
+      for (u_long i = 0; i < f->funcFParams.size(); i++) {
+        ObjectSymbolItem* o = (ObjectSymbolItem*)(f->funcFParams[i]);
+        printf("param%ld: const=%d,dim=%d",i, o->isConst, o->dimension);
+      }
+      printf("\n");
+    } else {
+      ObjectSymbolItem* o = (ObjectSymbolItem*)iter->second;
+      printf("const=%d,dim=%d\n", o->isConst, o->dimension);
+    }
+  }
+  tprintf(tabNum,"############################\n");
+  for (u_long i = 0; i < this->childs.size(); i++) {
+    this->childs[i]->toString(tabNum + 1 * TAB_LINE);
+  }
 }

@@ -15,6 +15,7 @@ class Parser {
 
   SyntaxNode* syntaxAnalyse();
   void toString();
+  CompUnitNode* getRoot() { return this->root; }
 
   private:
   /**

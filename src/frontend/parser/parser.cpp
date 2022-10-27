@@ -17,7 +17,7 @@ TokenInfo* Parser::popToken()
     return NULL;
   }
   TokenInfo* now = tokenInfoList[nowTokenListPtr];
-  Log("\t\t\tpop %s\n", now->str.c_str());
+  // Log("\t\t\tpop %s\n", now->str.c_str());
   nowTokenListPtr++;
   return now;
 }
@@ -36,7 +36,7 @@ TokenInfo* Parser::peekToken(int num)
 /* ------------------ error handle ------------------ */
 bool Parser::tokenLackHandler(TokenType tokenType)
 {
-  Log("in tokenLackHandler\n");
+  // Log("in tokenLackHandler\n");
   if (peekToken(0)->tokenType != tokenType) {
     ErrorInfo* errorInfo = new ErrorInfo();
     errorInfo->line = peekToken(-1)->line;
@@ -64,7 +64,7 @@ bool Parser::tokenLackHandler(TokenType tokenType)
 
 bool Parser::formatErrorHandler(int pLine, int formatNum, TokenInfo* token)
 {
-  Log("in formatErrorHandler\n");
+  // Log("in formatErrorHandler\n");
   const char* str = token->str.c_str();
   int fNum = 0;
   int fLine = token->line;
@@ -90,7 +90,7 @@ bool Parser::formatErrorHandler(int pLine, int formatNum, TokenInfo* token)
 
 bool Parser::errorMHandler(int line) 
 {
-  Log("in errorMHandler\n");
+  // Log("in errorMHandler\n");
   if (cycleDepth == 0) {
     errorList.addErrorInfo(new ErrorInfo(line, 'm'));
     return true;
@@ -101,7 +101,7 @@ bool Parser::errorMHandler(int line)
 
 CompUnitNode* Parser::compUnitAnalyse() 
 {
-  Log("in compUnitAnalyse\n");
+  // Log("in compUnitAnalyse\n");
   /* 初始化符号表 */
   symbolTableInit();
   CompUnitNode* node = new CompUnitNode();
@@ -125,7 +125,7 @@ CompUnitNode* Parser::compUnitAnalyse()
 
 DeclNode* Parser::declAnalyse()
 {
-  Log("in declAnalyse\n");
+  // Log("in declAnalyse\n");
   DeclNode* node = new DeclNode();
   /* deal ConstDecl : CONSTTK */
   if (peekToken(0)->tokenType == TokenType::CONSTTK) {
@@ -141,7 +141,7 @@ DeclNode* Parser::declAnalyse()
 
 ConstDeclNode* Parser::constDeclAnalyse()
 {
-  Log("in constDeclAnalyse\n");
+  // Log("in constDeclAnalyse\n");
   ConstDeclNode* node = new ConstDeclNode();
   popToken(); /* eat CONSTTK */
   node->bTypeNode = bTypeAnalyse();
@@ -158,7 +158,7 @@ ConstDeclNode* Parser::constDeclAnalyse()
 
 BTypeNode* Parser::bTypeAnalyse()
 {
-  Log("in bTypeAnalyse\n");
+  // Log("in bTypeAnalyse\n");
   BTypeNode* node = new BTypeNode();
   popToken(); /* eat INTTK */
   return node;
@@ -166,7 +166,7 @@ BTypeNode* Parser::bTypeAnalyse()
 
 ConstDefNode* Parser::constDefAnalyse(BTypeNode* bType)
 {
-  Log("in constDefAnalyse\n");
+  // Log("in constDefAnalyse\n");
   ConstDefNode* node = new ConstDefNode();
   node->isConst = true;
   node->bTypeNode = bType;
@@ -192,7 +192,7 @@ ConstDefNode* Parser::constDefAnalyse(BTypeNode* bType)
 
 ConstInitValNode* Parser::constInitValAnalyse()
 { 
-  Log("in constInitValAnalyse\n");
+  // Log("in constInitValAnalyse\n");
   ConstInitValNode* node = new ConstInitValNode();
   /* deal '{' [ ConstInitVal { ',' ConstInitVal } ] '}' */
   if (peekToken(0)->tokenType == TokenType::LBRACE) {
@@ -218,7 +218,7 @@ ConstInitValNode* Parser::constInitValAnalyse()
 
 VarDeclNode* Parser::varDeclAnalyse()
 {
-  Log("in varDeclAnalyse\n");
+  // Log("in varDeclAnalyse\n");
   VarDeclNode* node = new VarDeclNode();
   node->bTypeNode = bTypeAnalyse();
   node->varDefNodes.push_back(varDefAnalyse(node->bTypeNode));
@@ -234,7 +234,7 @@ VarDeclNode* Parser::varDeclAnalyse()
 
 VarDefNode* Parser::varDefAnalyse(BTypeNode* bType)
 {
-  Log("in varDefAnalyse\n");
+  // Log("in varDefAnalyse\n");
   VarDefNode* node = new VarDefNode();
   node->bTypeNode = bType;
   node->ident = peekToken(0);
@@ -262,7 +262,7 @@ VarDefNode* Parser::varDefAnalyse(BTypeNode* bType)
 
 InitValNode* Parser::initValAnalyse()
 {
-  Log("in initValAnalyse\n");
+  // Log("in initValAnalyse\n");
   InitValNode* node = new InitValNode();
   /* deal '{' [ InitVal { ',' InitVal } ] '}' */
   if (peekToken(0)->tokenType == TokenType::LBRACE) {
@@ -288,7 +288,7 @@ InitValNode* Parser::initValAnalyse()
 
 FuncDefNode* Parser::funcDefAnalyse()
 {
-  Log("in funcDefAnalyse\n");
+  // Log("in funcDefAnalyse\n");
   /* 在解析函数形参前需要新建符号表 */
   currentSymbolTable = currentSymbolTable->newSon();
 
@@ -317,7 +317,7 @@ FuncDefNode* Parser::funcDefAnalyse()
 
 MainFuncDefNode* Parser::mainFuncDefAnalyse()
 {
-  Log("in mainFuncDefAnalyse\n");
+  // Log("in mainFuncDefAnalyse\n");
   /* 在解析函数形参前需要新建符号表 */
   currentSymbolTable = currentSymbolTable->newSon();
 
@@ -340,7 +340,7 @@ MainFuncDefNode* Parser::mainFuncDefAnalyse()
 
 FuncTypeNode* Parser::funcTypeAnalyse()
 {
-  Log("in funcTypeAnalyse\n");
+  // Log("in funcTypeAnalyse\n");
   FuncTypeNode* node = new FuncTypeNode();
   node->funcType = peekToken(0);
   popToken(); /* eat VOIDTK or INTTK */
@@ -349,7 +349,7 @@ FuncTypeNode* Parser::funcTypeAnalyse()
 
 FuncFParamsNode* Parser::funcFParamsAnalyse()
 {
-  Log("in funcFParamsAnalyse\n");
+  // Log("in funcFParamsAnalyse\n");
   FuncFParamsNode* node = new FuncFParamsNode();
   node->funcFParamNodes.push_back(FuncFParamAnalyse());
   /* deal { ',' FuncFParam } */
@@ -362,7 +362,7 @@ FuncFParamsNode* Parser::funcFParamsAnalyse()
 
 FuncFParamNode* Parser::FuncFParamAnalyse()
 {
-  Log("in FuncFParamAnalyse\n");
+  // Log("in FuncFParamAnalyse\n");
   FuncFParamNode* node = new FuncFParamNode();
   node->bTypeNode = bTypeAnalyse();
   node->ident = peekToken(0);
@@ -389,7 +389,7 @@ FuncFParamNode* Parser::FuncFParamAnalyse()
 
 BlockNode* Parser::blockAnalyse(bool newSymbolTable, std::string* funcName, bool needRE)
 {
-  Log("in blockAnalyse\n");
+  // Log("in blockAnalyse\n");
   bool hasRE = false;
   if (newSymbolTable) {
     currentSymbolTable = currentSymbolTable->newSon();
@@ -413,7 +413,7 @@ BlockNode* Parser::blockAnalyse(bool newSymbolTable, std::string* funcName, bool
 
 BlockItemNode* Parser::blockItemAnalyse(std::string* funcName, bool* hasRE)
 {
-  Log("in blockItemAnalyse\n");
+  // Log("in blockItemAnalyse\n");
   BlockItemNode* node = new BlockItemNode();
   /* deal Decl */
   if (peekToken(0)->tokenType == TokenType::CONSTTK || 
@@ -431,7 +431,7 @@ BlockItemNode* Parser::blockItemAnalyse(std::string* funcName, bool* hasRE)
 
 bool Parser::isExpFirst() 
 {
-  Log("in isExpFirst\n");
+  // Log("in isExpFirst\n");
   TokenType type = peekToken(0)->tokenType;
   if (type == TokenType::LPARENT || type == TokenType::IDENFR ||
       type == TokenType::INTCON || type == TokenType::PLUS ||
@@ -443,7 +443,7 @@ bool Parser::isExpFirst()
 
 StmtNode* Parser::stmtAnalyse(std::string* funcName, bool* hasRE)
 {
-  Log("in stmtAnalyse\n");
+  // Log("in stmtAnalyse\n");
   *hasRE = false;
   bool tmpRE;
   StmtNode* node = new StmtNode();
@@ -577,7 +577,7 @@ StmtNode* Parser::stmtAnalyse(std::string* funcName, bool* hasRE)
 ExpNode* Parser::expAnalyse(LValNode* lval, bool addToNFCP, 
   std::vector<ObjectSymbolItem*>* funcCParams)
 {
-  Log("in expAnalyse\n");
+  // Log("in expAnalyse\n");
   ExpNode* node = new ExpNode();
   node->addExpNode = addExpAnalyse(lval, addToNFCP, funcCParams);
   return node;
@@ -585,7 +585,7 @@ ExpNode* Parser::expAnalyse(LValNode* lval, bool addToNFCP,
 
 CondNode* Parser::condAnalyse() 
 {
-  Log("in condAnalyse\n");
+  // Log("in condAnalyse\n");
   CondNode* node = new CondNode();
   node->lOrExpNode = lOrExpAnalyse();
   return node;
@@ -593,7 +593,7 @@ CondNode* Parser::condAnalyse()
 
 LValNode* Parser::lValAnalyse()
 {
-  Log("in lValAnalyse\n");
+  // Log("in lValAnalyse\n");
   LValNode* node = new LValNode();
   node->ident = peekToken(0);
   popToken(); /* eat IDENFR */
@@ -611,7 +611,7 @@ LValNode* Parser::lValAnalyse()
 PrimaryExpNode* Parser::primaryExpAnalyse(LValNode* lval, bool addToNFCP, 
   std::vector<ObjectSymbolItem*>* funcCParams)
 {   
-  Log("in primaryExpAnalyse\n");
+  // Log("in primaryExpAnalyse\n");
   PrimaryExpNode* node = new PrimaryExpNode();
   if (lval != NULL) {
     node->primaryExpType = PrimaryExpType::PRIMARY_LVAL;
@@ -658,7 +658,7 @@ PrimaryExpNode* Parser::primaryExpAnalyse(LValNode* lval, bool addToNFCP,
 
 NumberNode* Parser::numberAnalyse()
 {
-  Log("in numberAnalyse\n");
+  // Log("in numberAnalyse\n");
   NumberNode* node = new NumberNode();
   node->intConst = peekToken(0);
   popToken(); /* eat INTCON */
@@ -668,7 +668,7 @@ NumberNode* Parser::numberAnalyse()
 UnaryExpNode* Parser::unaryExpAnalyse(LValNode* lval, bool addToNFCP, 
   std::vector<ObjectSymbolItem*>* funcCParams)
 {
-  Log("in unaryExpAnalyse\n");
+  // Log("in unaryExpAnalyse\n");
   bool ret;
   UnaryExpNode* node = new UnaryExpNode();
   if (lval != NULL) {
@@ -722,7 +722,7 @@ UnaryExpNode* Parser::unaryExpAnalyse(LValNode* lval, bool addToNFCP,
 
 UnaryOpNode* Parser::unaryOpAnalyse()
 {
-  Log("in unaryOpAnalyse\n");
+  // Log("in unaryOpAnalyse\n");
   UnaryOpNode* node = new UnaryOpNode();
   node->unaryOp = peekToken(0);
   popToken(); /* eat PLUS | MINU | NOT */
@@ -731,7 +731,7 @@ UnaryOpNode* Parser::unaryOpAnalyse()
 
 FuncRParamsNode* Parser::funcRParamsAnalyse(std::vector<ObjectSymbolItem*>* funcCParams)
 {
-  Log("in funcRParamsAnalyse\n");
+  // Log("in funcRParamsAnalyse\n");
   FuncRParamsNode* node = new FuncRParamsNode();
   node->expNodes.push_back(expAnalyse(NULL, true, funcCParams));
   while (peekToken(0)->tokenType == TokenType::COMMA) {
@@ -743,7 +743,7 @@ FuncRParamsNode* Parser::funcRParamsAnalyse(std::vector<ObjectSymbolItem*>* func
 
 MulExpNode* Parser::mulExpAnalyse(LValNode* lval, bool addToNFCP, std::vector<ObjectSymbolItem*>* funcCParams)
 {
-  Log("in mulExpAnalyse\n");
+  // Log("in mulExpAnalyse\n");
   MulExpNode* node = new MulExpNode(BinaryExpType::MUL);
   node->unaryExpNodes.push_back(unaryExpAnalyse(lval, addToNFCP, funcCParams));
   while (peekToken(0)->tokenType == TokenType::MULT ||
@@ -758,7 +758,7 @@ MulExpNode* Parser::mulExpAnalyse(LValNode* lval, bool addToNFCP, std::vector<Ob
 
 AddExpNode* Parser::addExpAnalyse(LValNode* lval, bool addToNFCP, std::vector<ObjectSymbolItem*>* funcCParams)
 {
-  Log("in addExpAnalyse\n");
+  // Log("in addExpAnalyse\n");
   AddExpNode* node = (AddExpNode*)new BinaryExpNode(BinaryExpType::ADD);
   node->operands.push_back(mulExpAnalyse(lval, addToNFCP, funcCParams));
   while (peekToken(0)->tokenType == TokenType::PLUS ||
@@ -772,7 +772,7 @@ AddExpNode* Parser::addExpAnalyse(LValNode* lval, bool addToNFCP, std::vector<Ob
 
 RelExpNode* Parser::relExpAnalyse()
 {
-  Log("in relExpAnalyse\n");
+  // Log("in relExpAnalyse\n");
   RelExpNode* node = (RelExpNode*)new BinaryExpNode(BinaryExpType::REL);
   node->operands.push_back(addExpAnalyse(NULL, false, NULL));
   while (peekToken(0)->tokenType == TokenType::LSS || 
@@ -788,7 +788,7 @@ RelExpNode* Parser::relExpAnalyse()
 
 EqExpNode* Parser::eqExpAnalyse()
 {
-  Log("in eqExpAnalyse\n");
+  // Log("in eqExpAnalyse\n");
   EqExpNode* node = (EqExpNode*)new BinaryExpNode(BinaryExpType::EQ);
   node->operands.push_back(relExpAnalyse());
   while (peekToken(0)->tokenType == TokenType::EQL ||
@@ -802,7 +802,7 @@ EqExpNode* Parser::eqExpAnalyse()
 
 LAndExpNode* Parser::lAndExpAnalyse()
 {
-  Log("in lAndExpAnalyse\n");
+  // Log("in lAndExpAnalyse\n");
   LAndExpNode* node = (LAndExpNode*)new BinaryExpNode(BinaryExpType::LAND);
   node->operands.push_back(eqExpAnalyse());
   while (peekToken(0)->tokenType == TokenType::AND) {
@@ -815,7 +815,7 @@ LAndExpNode* Parser::lAndExpAnalyse()
 
 LOrExpNode* Parser::lOrExpAnalyse()
 {
-  Log("in lOrExpAnalyse\n");
+  // Log("in lOrExpAnalyse\n");
   LOrExpNode* node = (LOrExpNode*)new BinaryExpNode(BinaryExpType::LOR);
   node->operands.push_back(lAndExpAnalyse());
   while (peekToken(0)->tokenType == TokenType::OR) {
@@ -828,7 +828,7 @@ LOrExpNode* Parser::lOrExpAnalyse()
 
 ConstExpNode* Parser::constExpAnalyse()
 {
-  Log("in constExpAnalyse\n");
+  // Log("in constExpAnalyse\n");
   ConstExpNode* node = new ConstExpNode();
   node->addExpNode = addExpAnalyse(NULL, false, NULL);
   return node;
@@ -836,7 +836,7 @@ ConstExpNode* Parser::constExpAnalyse()
 
 void Parser::toString()
 {
-  Log("in\n");
+  // Log("in\n");
   if (root == NULL) {
     Log("before compUnitAnalyse\n");
     root = compUnitAnalyse();

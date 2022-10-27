@@ -136,14 +136,15 @@ class AbstVarDefNode : public SyntaxNode {
   int arrayDimension;
   bool isConst;
   BTypeNode* bTypeNode;
-
+  std::vector<ConstExpNode*> constExpNodes; /* 数组的维度信息 */
+  
   public:
   AbstVarDefNode() : ident(NULL), arrayDimension(0), isConst(false), bTypeNode(NULL) {}
 };
 
 class ConstDefNode : public AbstVarDefNode {
   public:
-  std::vector<ConstExpNode*> constExpNodes;
+  // std::vector<ConstExpNode*> constExpNodes; /* 数组每维元素个数数组 */
   ConstInitValNode* constInitValNode;
   
   public:
@@ -175,7 +176,7 @@ class VarDeclNode : public SyntaxNode {
 
 class VarDefNode : public AbstVarDefNode {
   public:
-  std::vector<ConstExpNode*> constExpNodes;
+  // std::vector<ConstExpNode*> constExpNodes;
   bool hasInitVal;  
   InitValNode* initValNode;
   
@@ -233,7 +234,7 @@ class FuncFParamsNode : public SyntaxNode {
 
 class FuncFParamNode : public AbstVarDefNode {
   public:
-  std::vector<ConstExpNode*> constExpNodes;
+  // std::vector<ConstExpNode*> constExpNodes; 
   
   public:
   FuncFParamNode() {}
@@ -284,6 +285,7 @@ class ExpNode : public SyntaxNode {
   public:
   ExpNode(): addExpNode(NULL) {}
   std::string toString() override;
+  int getConstValue();
 };
 
 class CondNode : public SyntaxNode {
@@ -316,6 +318,7 @@ class PrimaryExpNode : public SyntaxNode {
   PrimaryExpNode(): primaryExpType(PRIMARY_NONE), expNode(NULL), 
   lValNode(NULL), numberNode(NULL) {}
   std::string toString() override;
+  int getConstValue();
 };
 
 class NumberNode : public SyntaxNode {
@@ -325,6 +328,7 @@ class NumberNode : public SyntaxNode {
   public:
   NumberNode(): intConst(NULL) {}
   std::string toString() override;
+  int getConstValue();
 };
 
 class UnaryExpNode : public SyntaxNode {
@@ -342,6 +346,7 @@ class UnaryExpNode : public SyntaxNode {
   ident(NULL), hasFuncRParams(false), funcRParamsNode(NULL), 
   unaryOpNode(NULL), unaryExpNode(NULL) {}
   std::string toString() override;
+  int getConstValue();
 };
 
 class UnaryOpNode : public SyntaxNode {
@@ -368,6 +373,7 @@ class ConstExpNode : public SyntaxNode {
   public:
   ConstExpNode(): addExpNode(NULL) {}
   std::string toString() override;
+  int getConstValue();
 };
 
 enum BinaryExpType {
@@ -397,10 +403,12 @@ class MulExpNode : public BinaryExpNode {
   public:
   MulExpNode(BinaryExpType t) : BinaryExpNode(t) {}
   std::string toString() override;
+  int getConstValue();
 };
 
 class AddExpNode : public BinaryExpNode {
-
+  public:
+  int getConstValue();
 };
 
 class RelExpNode : public BinaryExpNode {
