@@ -40,7 +40,6 @@ int main(int argc, char **argv)
     Log("lexer has something error\n");
     exit(1);
   }
-
   Parser* parser = new Parser();
   parser->toString();
   Log("after parser");

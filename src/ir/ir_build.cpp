@@ -734,7 +734,9 @@ void printfStmt2ir(BasicBlock* nowblk, StmtNode* node)
   for (int i = 1; str[i] != '"'; i++) {
     if (str[i] == '%') {
       i++;
-      dealputstrCall(nowblk, s, strLength + 1); /* +1是因为有\00 */
+      if (s.length() != 0) {
+        dealputstrCall(nowblk, s, strLength + 1); /* +1是因为有\00 */
+      }
       Value* value = exp2ir(nowblk, node->expNodes[expPtr]);
       expPtr++;
       CallInst* inst = new CallInst();
@@ -753,7 +755,7 @@ void printfStmt2ir(BasicBlock* nowblk, StmtNode* node)
       strLength++;
     }
   }
-  if (s.length() != 0) {
+  if (strLength != 0) {
     dealputstrCall(nowblk, s, strLength + 1);
   }
 }

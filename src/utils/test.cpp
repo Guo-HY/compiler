@@ -25,7 +25,7 @@ void getTokenTest(Lexer* lexer)
 /**
  * @brief 通过调用getAllToken输出所有的词法元素以及行号
  */
-void getAllTokenTest(Lexer* lexer)
+void getAllTokenTest()
 {
 
   int size = tokenInfoList.size();
