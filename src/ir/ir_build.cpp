@@ -16,6 +16,7 @@ std::unordered_map<std::string, GlobalValue*> value2stringConst;
 std::vector<BasicBlock*> whileEndBlockStack;
 std::vector<BasicBlock*> whileCondBlockStack;
 
+bool inFuncCallAnalysis;
 /* --------------------------------------- tools ---------------------------------------  */
 
 void updateLlvmIrId(int id)
@@ -68,7 +69,11 @@ bool bblkHasTermiInst(BasicBlock* bblk)
   if (bblk->instructions.size() == 0) {
     return false;
   }
+
   Instruction* inst = bblk->instructions[bblk->instructions.size() - 1];
+  if (inst == NULL) {
+    panic("error");
+  }
   if (inst->instType == InstIdtfr::RET_II || inst->instType == InstIdtfr::BR_II) {
     return true;
   }
@@ -83,7 +88,7 @@ Type* bType2ir(BTypeNode* node)
 /* 不可用于函数形参解析 */
 Type* abstVarDef2Type(AbstVarDefNode* node)
 { 
-  Log("");
+  //Log("");
   if (node->arrayDimension == 0) {
     return bType2ir(node->bTypeNode);
   }
@@ -130,8 +135,10 @@ void genStoreInst(BasicBlock* nowBasicBlock, Value* storeValue, Value* storePtr)
 /* node可以为NULL */
 Value* genCallInst(BasicBlock* nowBasicBlock, std::string funcName, FuncRParamsNode* node)
 {
+  inFuncCallAnalysis = true;
   CallInst* inst = new CallInst();
   ObjectSymbolItem* item = globalSymbolTable->getFuncReturnType(&funcName);
+  Log("item type = %d", item->symbolType);
   if (item->symbolType == SymbolType::INT_ST) {
     inst->returnType = new IntegerType(32);
   } else {
@@ -153,6 +160,7 @@ Value* genCallInst(BasicBlock* nowBasicBlock, std::string funcName, FuncRParamsN
     }
   }
   nowBasicBlock->instructions.push_back(inst);
+  inFuncCallAnalysis = false;
   return result;
 }
 
@@ -222,7 +230,7 @@ void genRetInst(BasicBlock* nowBasicBlock,Type* type, Value* value, bool isVoid)
   nowBasicBlock->instructions.push_back(inst);
 }
 
-Value* genGEPInst(BasicBlock* nowblk,Value* ptrVal, Type* elemType, std::vector<int> indexs)
+Value* genGEPInst(BasicBlock* nowblk,Value* ptrVal, Type* elemType, std::vector<Value*> indexs)
 {
   
   GEPInst* inst = new GEPInst();
@@ -238,9 +246,8 @@ Value* genGEPInst(BasicBlock* nowblk,Value* ptrVal, Type* elemType, std::vector<
   VirtRegValue* result = allocVirtReg(type2PtrType(resultPointType));
   inst->elemType = elemType;
   inst->elemTypePointer = elemPtrType;
-  for (u_long i = 0; i < indexs.size(); i++) {
-    inst->indexs.push_back(new NumberConstant(indexs[i], 64));
-  }
+  inst->indexs = indexs;
+
   inst->ptrval = ptrVal;
   inst->result = result;
   nowblk->instructions.push_back(inst);
@@ -252,7 +259,7 @@ Value* genGEPInst(BasicBlock* nowblk,Value* ptrVal, Type* elemType, std::vector<
 
 Module* compUnit2ir(CompUnitNode* node, std::vector<std::string> funcDecl)
 {
-  Log("");
+  //Log("");
   symbolTableInit();
   name2globalValue.clear();
   Module* m = new Module();
@@ -297,14 +304,17 @@ GlobalInitValue* globalInitVal2ir(InitValNode* node)
   return globalInitValue;
 }
 
-GlobalInitValue* globalConstInitVal2ir(ConstInitValNode* node)
+GlobalInitValue* globalConstInitVal2ir(std::string* varName, ConstInitValNode* node)
 {
   if (node->initArray == false) {
-    return new GlobalInitValue(new IntegerType(32), new NumberConstant(node->constExpNode->getConstValue(), 32));
+    GlobalInitValue* globalInitValue = new GlobalInitValue(new IntegerType(32), new NumberConstant(node->constExpNode->getConstValue(), 32));
+    Log("%s, addInitValue = %d, again %d",varName->c_str(), node->constExpNode->getConstValue(), node->constExpNode->getConstValue());
+    currentSymbolTable->addInitValue(varName, node->constExpNode->getConstValue());
+    return globalInitValue;
   }
   GlobalInitValue* globalInitValue = new GlobalInitValue();
   for (u_long i = 0; i < node->constInitValNodes.size(); i++) {
-    globalInitValue->globalInitValues.push_back(globalConstInitVal2ir(node->constInitValNodes[i]));
+    globalInitValue->globalInitValues.push_back(globalConstInitVal2ir(varName, node->constInitValNodes[i]));
   }
   globalInitValue->type = new ArrayType(globalInitValue->globalInitValues.size(), globalInitValue->globalInitValues[0]->type);
   return globalInitValue;
@@ -315,6 +325,7 @@ GlobalValue* globalVarDef2ir(AbstVarDefNode* node)
 {
   globalSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SyntaxNodeType::ABSTVAR_SNT);
   Type* type = abstVarDef2Type(node);
+  globalSymbolTable->addVarType(&(node->ident->str), type);
   GlobalValue* globalValue = new GlobalValue(type2PtrType(type));
   globalValue->name = node->ident->str;
   globalValue->isConst = node->isConst;
@@ -326,7 +337,7 @@ GlobalValue* globalVarDef2ir(AbstVarDefNode* node)
     }
   } else {
     ConstDefNode* constVar = (ConstDefNode*)node;
-    globalValue->globalInitValue = globalConstInitVal2ir(constVar->constInitValNode);
+    globalValue->globalInitValue = globalConstInitVal2ir(&(node->ident->str), constVar->constInitValNode);
   }
   return globalValue;
 }
@@ -341,7 +352,7 @@ Value* storeFuncParam(BasicBlock* nowBasicBlock, Type* type, VirtRegValue* value
 
 Function* funcDef2ir(FuncDefNode* node)
 {
-  Log("");
+  //Log("");
   id2LocalVarAddr.clear();
   updateLlvmIrId(1);
   currentSymbolTable = currentSymbolTable->newSon();
@@ -377,9 +388,16 @@ Function* funcDef2ir(FuncDefNode* node)
       function->basicBlocks.push_back(bbkstmp[i]);
     }
   }
+  if (function->basicBlocks.size() == 0) {
+    allocBasicBlock();
+  }
 
   /* 处理一下 void函数没有return语句的情况 */
+
   BasicBlock* lastBasicBlock = function->basicBlocks[function->basicBlocks.size() - 1];
+  if (lastBasicBlock == NULL) {
+    panic("error");
+  }
   if (!bblkHasTermiInst(lastBasicBlock)) {
     genRetInst(lastBasicBlock, NULL, NULL, true);
   }
@@ -399,21 +417,48 @@ Value* number2ir(NumberNode* node)
 }
 
 /* 返回的是变量的值的地址 */
-Value* lVal2ir(LValNode* node)
+Value* lVal2ir(BasicBlock* nowblk, LValNode* node)
 {
-  if (node->expNodes.size() != 0) {
-    panic("error");
-  }
   Value* addr;
+  bool isGlobal;
   int llvmIrId = currentSymbolTable->getLlvmIrId(&(node->ident->str));
   if (id2LocalVarAddr.count(llvmIrId) != 0) {
     addr = id2LocalVarAddr[llvmIrId];
+    isGlobal = false;
   } else if (name2globalValue.count(node->ident->str) != 0) {
     addr = name2globalValue[node->ident->str];
+    isGlobal = true;
   } else {
     panic("error");
   }
-  return addr;
+  if (((PointerType*)(addr->type))->pointType->typeIdtfr == TypeIdtfr::INTEGER_TI) {
+    /* 如果不是数组类型，直接返回地址就可以 */
+    return addr;
+  }
+
+
+  std::vector<Value*> indexs;
+  indexs.push_back(new NumberConstant(0, 64));
+  for (u_long i = 0; i < node->expNodes.size(); i++) {
+    indexs.push_back(exp2ir(nowblk, node->expNodes[i]));
+  }
+  if (isGlobal) {
+    return genGEPInst(nowblk, addr, ptrType2Type(addr->type), indexs);
+  }
+  if (((PointerType*)(addr->type))->pointType->typeIdtfr == TypeIdtfr::POINTER_TI) {
+    /* 此时一定是传入的函数参数 */
+    addr = genLoadInst(nowblk, addr);
+    if (node->expNodes.size() == 1) {
+      return genGEPInst(nowblk, addr, ptrType2Type(addr->type), {indexs[1]});
+    }
+    return genGEPInst(nowblk, addr, ptrType2Type(addr->type), {indexs[1],indexs[2]});
+    }
+  /* 此时是局部声明的变量 */
+  if (node->expNodes.size() == 1) {
+    return genGEPInst(nowblk, addr, ptrType2Type(addr->type), indexs);
+  }
+  return genGEPInst(nowblk, addr, ptrType2Type(addr->type), indexs);
+  
 }
 
 Value* primaryExp2ir(BasicBlock* nowBasicBlock, PrimaryExpNode* node)
@@ -424,9 +469,14 @@ Value* primaryExp2ir(BasicBlock* nowBasicBlock, PrimaryExpNode* node)
   case PrimaryExpType::PRIMARY_EXP:
     return exp2ir(nowBasicBlock, node->expNode);
   case PrimaryExpType::PRIMARY_LVAL:
-    addr = lVal2ir(node->lValNode);
-    /* 此处将值load出来返回 */
-    return genLoadInst(nowBasicBlock, addr);
+    addr = lVal2ir(nowBasicBlock, node->lValNode);
+    /* 此处将值load出来返回，注意需要区分是否是funcCall传数组 */
+    if (inFuncCallAnalysis && ((PointerType*)(addr->type))->pointType->typeIdtfr == TypeIdtfr::ARRAY_TI) {
+      NumberConstant* idx = new NumberConstant(0, 64);
+      return genGEPInst(nowBasicBlock, addr, ptrType2Type(addr->type), {idx, idx} );
+    } else {
+      return genLoadInst(nowBasicBlock, addr);
+    }
   case PrimaryExpType::PRIMARY_NUMBER:
     return number2ir(node->numberNode);
   default:
@@ -459,10 +509,12 @@ Value* unaryExp2ir(BasicBlock* nowBasicBlock, UnaryExpNode* node)
       return i1;    /* 此处不用扩展 */
       // return genZextInst(nowBasicBlock, 32, i1); /* 将i1扩展为i32 */
     }
+    return value;
   default:
     panic("error");
-    break;
   }
+  panic("error");
+  return NULL;
 }
 
 Value* mulExp2ir(BasicBlock* nowBasicBlock, MulExpNode* node)
@@ -535,6 +587,9 @@ Value* relExp2ir(BasicBlock* nowBasicBlock, BinaryExpNode* node)
     }
     op1 = genIcmpInst(nowBasicBlock, opType, op1, op2);
   }
+  if (node->operands.size() == 1) {
+    op1 = genIcmpInst(nowBasicBlock, ICMPCASE::NE_ICMPCASE, op1, new NumberConstant(0, 32));
+  }
   return op1;
 }
 
@@ -572,7 +627,7 @@ Value* constExp2ir(BasicBlock* nowBasicBlock, ConstExpNode* node)
 
 BasicBlock* block2ir(BasicBlock* nowBasicBlock, BlockNode* node, bool genNewSymbolTable)
 {
-  Log("");
+  //Log("");
   if (genNewSymbolTable) {
     currentSymbolTable = currentSymbolTable->newSon();
   }
@@ -610,34 +665,39 @@ void varDecl2ir(BasicBlock* nowblk, VarDeclNode* node)
   }
 }
 
-Value* localConstInitVal2ir(BasicBlock* nowBasicBlock, ConstInitValNode* node, VirtRegValue* addr)
+void localConstInitVal2ir(BasicBlock* nowBasicBlock, ConstInitValNode* node, Value* addr)
 {
-  if (node->initArray) {
-    panic("error");
+  if (!node->initArray) {
+    int value = node->constExpNode->getConstValue();
+    Value* initValue = new NumberConstant(value, 32);
+    genStoreInst(nowBasicBlock, initValue, addr);
   }
-  int value = node->constExpNode->getConstValue();
-  Value* initValue = new NumberConstant(value, 32);
-  genStoreInst(nowBasicBlock, initValue, addr);
-  return initValue;
+  Value* elemAddr;
+  for (u_long i = 0; i < node->constInitValNodes.size(); i++) {
+    elemAddr = genGEPInst(nowBasicBlock, addr, ptrType2Type(addr->type), {new NumberConstant(0, 64), new NumberConstant(i, 64)});
+    localConstInitVal2ir(nowBasicBlock,node->constInitValNodes[i], elemAddr);
+  }
 }
 
-Value* localInitVal2ir(BasicBlock* nowBasicBlock, InitValNode* node, VirtRegValue* addr)
+void localInitVal2ir(BasicBlock* nowBasicBlock, InitValNode* node, Value* addr)
 {
-  if (node->initArray) {
-    panic("error");
+  if (!node->initArray) {
+    Value* initValue = exp2ir(nowBasicBlock, node->expNode);
+    genStoreInst(nowBasicBlock, initValue, addr);
+    return;
   }
-  Value* initValue = exp2ir(nowBasicBlock, node->expNode);
-  genStoreInst(nowBasicBlock, initValue, addr);
-  return initValue;
+  Value* elemAddr;
+  for (u_long i = 0; i < node->initValNodes.size(); i++) {
+    elemAddr = genGEPInst(nowBasicBlock, addr, ptrType2Type(addr->type), {new NumberConstant(0, 64), new NumberConstant(i, 64)});
+    localInitVal2ir(nowBasicBlock,node->initValNodes[i], elemAddr);
+  }
 }
 
 Value* localVarDef2ir(BasicBlock* nowBasicBlock, AbstVarDefNode* node)
 {
-  Log("");
+  //Log("");
   Type* valueType = abstVarDef2Type(node);
-  if (valueType->typeIdtfr != TypeIdtfr::INTEGER_TI) {
-    panic("error");
-  }
+
   VirtRegValue* addr = (VirtRegValue*)genAllocaInst(nowBasicBlock, valueType);
   currentSymbolTable->insertNodeWithLlvmIrId(&(node->ident->str), node, SyntaxNodeType::ABSTVAR_SNT, addr->getId());
   
@@ -659,7 +719,7 @@ BasicBlock* stmt2ir(BasicBlock* nowBasicBlock, StmtNode* node)
   {
   case StmtType::STMT_ASSIGN:
     expValue = exp2ir(nowBasicBlock, node->expNodes[0]);
-    lvalAddr = lVal2ir(node->lValNode);
+    lvalAddr = lVal2ir(nowBasicBlock, node->lValNode);
     genStoreInst(nowBasicBlock, expValue, lvalAddr);
     return nowBasicBlock;
   case StmtType::STMT_EXP:
@@ -689,7 +749,7 @@ BasicBlock* stmt2ir(BasicBlock* nowBasicBlock, StmtNode* node)
     callInst->result = value;
     callInst->returnType = new IntegerType(32);
     nowBasicBlock->instructions.push_back(callInst);
-    addr = lVal2ir(node->lValNode);
+    addr = lVal2ir(nowBasicBlock, node->lValNode);
     genStoreInst(nowBasicBlock, value, addr);
     return nowBasicBlock;
   case StmtType::STMT_PRINTF:
@@ -717,7 +777,8 @@ void dealputstrCall(BasicBlock* nowblk, std::string s, int strLength)
     strConst->globalInitValue = initValue;
     value2stringConst[s] = strConst;
   }
-  Value* addr = genGEPInst(nowblk, strConst, strConst->type, {0,0});
+  NumberConstant* ptr = new NumberConstant(0, 64);
+  Value* addr = genGEPInst(nowblk, strConst, strConst->type, {ptr,ptr});
   CallInst* inst = new CallInst();
   inst->returnType = new VoidType();
   inst->name = "putstr";

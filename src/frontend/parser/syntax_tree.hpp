@@ -281,9 +281,11 @@ class StmtNode : public SyntaxNode {
 class ExpNode : public SyntaxNode {
   public:
   AddExpNode* addExpNode;
-  
+  bool alreadyComputeValue;
+  int value;
+
   public:
-  ExpNode(): addExpNode(NULL) {}
+  ExpNode(): addExpNode(NULL), alreadyComputeValue(false) {}
   std::string toString() override;
   int getConstValue();
 };
@@ -305,6 +307,7 @@ class LValNode : public SyntaxNode {
   public:
   LValNode(): ident(NULL) {}
   std::string toString() override;
+  int getConstValue();
 };
 
 class PrimaryExpNode : public SyntaxNode {
@@ -369,9 +372,11 @@ class FuncRParamsNode : public SyntaxNode {
 class ConstExpNode : public SyntaxNode {
   public:
   AddExpNode* addExpNode;
-  
+  bool alreadyComputeValue;
+  int value;
+
   public:
-  ConstExpNode(): addExpNode(NULL) {}
+  ConstExpNode(): addExpNode(NULL), alreadyComputeValue(false) {}
   std::string toString() override;
   int getConstValue();
 };

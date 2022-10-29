@@ -21,7 +21,7 @@ class ErrorList {
 
   public:
   void addErrorInfo(ErrorInfo* info) {
-    Log("in addErrorInfo\n");
+    //Log("in addErrorInfo\n");
     this->errorInfos.emplace(info->line, info);
   }
 

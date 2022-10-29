@@ -182,15 +182,15 @@ ConstDefNode* Parser::constDefAnalyse(BTypeNode* bType)
     tokenLackHandler(TokenType::RBRACK);
   }
   popToken(); /* eat ASSIGN */
-  node->constInitValNode = constInitValAnalyse();
-
+  
   /* insert symbol to currentSymbolTable */
   currentSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SyntaxNodeType::ABSTVAR_SNT);
 
+  node->constInitValNode = constInitValAnalyse(&(node->ident->str));
   return node;
 }
 
-ConstInitValNode* Parser::constInitValAnalyse()
+ConstInitValNode* Parser::constInitValAnalyse(std::string* name)
 { 
   // Log("in constInitValAnalyse\n");
   ConstInitValNode* node = new ConstInitValNode();
@@ -202,10 +202,10 @@ ConstInitValNode* Parser::constInitValAnalyse()
       popToken(); /* eat RBRACE */
       return node;
     }
-    node->constInitValNodes.push_back(constInitValAnalyse());
+    node->constInitValNodes.push_back(constInitValAnalyse(name));
     while (peekToken(0)->tokenType == TokenType::COMMA) {
       popToken(); /* eat COMMA */
-      node->constInitValNodes.push_back(constInitValAnalyse());
+      node->constInitValNodes.push_back(constInitValAnalyse(name));
     }
     popToken(); /* eat RBRACE */
     return node;
@@ -213,6 +213,8 @@ ConstInitValNode* Parser::constInitValAnalyse()
   /* deal ConstExp */
   node->initArray = false;
   node->constExpNode = constExpAnalyse();
+  // int value = node->constExpNode->getConstValue();
+  // currentSymbolTable->addInitValue(name, value);
   return node;
 }
 
@@ -838,12 +840,12 @@ void Parser::toString()
 {
   // Log("in\n");
   if (root == NULL) {
-    Log("before compUnitAnalyse\n");
+    //Log("before compUnitAnalyse\n");
     root = compUnitAnalyse();
-    Log("after compUnitAnalyse\n");
+    //Log("after compUnitAnalyse\n");
   }
   std::string s = root->toString();
-  Log("after root->toString\n");
+  //Log("after root->toString\n");
   printf("%s", s.c_str());
 }
 

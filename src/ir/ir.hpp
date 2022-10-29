@@ -2,7 +2,7 @@
 #define _IR_H 1
 #include <vector>
 #include <string>
-#include "../frontend/parser/symbol_table.hpp"
+// #include "../frontend/parser/symbol_table.hpp"
 
 class Type;
 class VoidType;
@@ -111,6 +111,19 @@ class ArrayType : public Type {
   ArrayType() : Type(ARRAY_TI), elemNums(0), elemType(NULL) {}
   ArrayType(int e, Type* t) : Type(ARRAY_TI), elemNums(e), elemType(t) {}
   std::string toString() override ;
+  std::vector<int> getDims() 
+  {
+    std::vector<int> result;
+    result.push_back(elemNums);
+    if (elemType->typeIdtfr != TypeIdtfr::ARRAY_TI) {
+      return result;
+    }
+    std::vector<int> tmp = ((ArrayType*)elemType)->getDims();
+    for (u_long i = 0; i < tmp.size(); i++) {
+      result.push_back(tmp[i]);
+    }
+    return result;
+  }
 };
 
 enum ValueIdtfr {

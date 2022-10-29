@@ -25,7 +25,7 @@ char symbolTypeName[][20] {
 void symbolTableInit()
 {
   /* TODO: 需要检查，当symbolTable不为NULL时需要delete，防止内存泄露 */
-  Log("in symbolTableInit\n");
+  //Log("in symbolTableInit\n");
   currentSymbolTable = new SymbolTable(0);
   allSymbolTable[0] = currentSymbolTable;
   currentTableId = 0;
@@ -34,7 +34,7 @@ void symbolTableInit()
 
 SymbolTable* SymbolTable::newSon()
 {
-  Log("in newSon\n");
+  //Log("in newSon\n");
   currentTableId++;
   SymbolTable* table = new SymbolTable(currentTableId);
   table->parent = this;
@@ -45,7 +45,7 @@ SymbolTable* SymbolTable::newSon()
 
 SymbolTable* SymbolTable::findParent()
 { 
-  Log("in findParent\n");
+  //Log("in findParent\n");
   if (this->parent == NULL) {
     Log("error : parent = NULL\n");
   }
@@ -54,7 +54,7 @@ SymbolTable* SymbolTable::findParent()
 
 bool SymbolTable::insertSymbol(std::string* symbolName, SymbolItem* symbolItem)
 {
-  Log("in insertSymbol\n");
+  //Log("in insertSymbol\n");
   if (this->name2symbols.count(*symbolName) != 0) {
     Log("error : currentSymbolTable already has symbol %s\n", symbolName->c_str());
     errorList.addErrorInfo(new ErrorInfo(symbolItem->line, 'b'));
@@ -66,7 +66,7 @@ bool SymbolTable::insertSymbol(std::string* symbolName, SymbolItem* symbolItem)
 
 SymbolItem* SymbolTable::findSymbol(std::string* symbolName)
 {
-  Log("in findSymbol\n");
+  //Log("in findSymbol\n");
   if (this->name2symbols.count(*symbolName) == 0) {
     if (this->parent == NULL) {
       return NULL;
@@ -78,7 +78,7 @@ SymbolItem* SymbolTable::findSymbol(std::string* symbolName)
 
 SymbolItem* SymbolTable::insertNode(std::string* symbolName, SyntaxNode* node, SyntaxNodeType type)
 {
-  Log("in insertNode\n");
+  //Log("in insertNode\n");
   SymbolItem* item;
   if (type == SyntaxNodeType::FUNC_SNT) {
     item = funcDefNode2FuncSymbolItem(node);
@@ -91,7 +91,7 @@ SymbolItem* SymbolTable::insertNode(std::string* symbolName, SyntaxNode* node, S
 
 SymbolItem* SymbolTable::insertNodeWithLlvmIrId(std::string* symbolName, SyntaxNode* node, SyntaxNodeType type, int id)
 {
-  Log("");
+  //Log("");
   SymbolItem* item = insertNode(symbolName, node, type);
   item->llvmIrId = id;
   if (this->id2symbols.count(id) != 0) {
@@ -103,7 +103,7 @@ SymbolItem* SymbolTable::insertNodeWithLlvmIrId(std::string* symbolName, SyntaxN
 
 FuncSymbolItem* SymbolTable::funcDefNode2FuncSymbolItem(SyntaxNode* node) 
 {
-  Log("in funcDefNode2FuncSymbolItem\n");
+  //Log("in funcDefNode2FuncSymbolItem\n");
   FuncSymbolItem* funcItem = new FuncSymbolItem();
   FuncDefNode* funcDefNode = (FuncDefNode*)node;
   funcItem->line = funcDefNode->ident->line;
@@ -125,11 +125,11 @@ FuncSymbolItem* SymbolTable::funcDefNode2FuncSymbolItem(SyntaxNode* node)
 
 ObjectSymbolItem* SymbolTable::abstVarDefNode2ObjectSymbolItem(AbstVarDefNode* node) 
 {
-  Log("in abstVarDefNode2ObjectSymbolItem\n");
+  //Log("in abstVarDefNode2ObjectSymbolItem\n");
   ObjectSymbolItem* objectItem = new ObjectSymbolItem();
-  Log("before");
+  //Log("before");
   objectItem->line = node->ident->line;
-  Log("after");
+  //Log("after");
   objectItem->isConst = node->isConst;
   if (node->arrayDimension == 0) {
     objectItem->symbolType = SymbolType::INT_ST;
@@ -142,22 +142,23 @@ ObjectSymbolItem* SymbolTable::abstVarDefNode2ObjectSymbolItem(AbstVarDefNode* n
 
 ObjectSymbolItem* SymbolTable::getFuncReturnType(std::string* funcName)
 {
-  Log("in getFuncReturnType\n");
+  //Log("in getFuncReturnType\n");
   ObjectSymbolItem* o = new ObjectSymbolItem();
   SymbolItem* item = this->findSymbol(funcName);
   if (item == NULL || item->symbolType != SymbolType::FUNC_ST) {
     o->symbolType = SymbolType::NONE_ST;
     return o;
   }
+  FuncSymbolItem* fitem = (FuncSymbolItem*)item;
   o->dimension = 0;
   o->isConst = false;
-  o->symbolType = item->symbolType;
+  o->symbolType = fitem->returnType;
   return o;
 }
 
 ObjectSymbolItem* SymbolTable::getLValType(LValNode* node)
 {
-  Log("in getLValType\n");
+  //Log("in getLValType\n");
   ObjectSymbolItem* o = new ObjectSymbolItem();
   SymbolItem* item = this->findSymbol(&(node->ident->str));
   if (item == NULL ) {
@@ -178,7 +179,7 @@ ObjectSymbolItem* SymbolTable::getLValType(LValNode* node)
 
 ObjectSymbolItem* SymbolTable::getNumberType()
 {
-  Log("in getNumberType\n");
+  //Log("in getNumberType\n");
   ObjectSymbolItem* o = new ObjectSymbolItem();
   o->dimension = 0;
   o->isConst = false;
@@ -225,11 +226,52 @@ void SymbolTable::updateLlvmIrIdById(int oldId, int newId)
   item->llvmIrId = newId;
 }
 
+void SymbolTable::addInitValue(std::string* symbolName, int value)
+{
+  Log("add value : name is %s, value is %d", symbolName->c_str(), value);
+  SymbolItem* item = this->findSymbol(symbolName);
+  if (item == NULL) {
+    panic("error");
+  }
+  if (item->symbolType != SymbolType::INT_ST && item->symbolType != SymbolType::ARRAY_ST) {
+    panic("error");
+  }
+  ObjectSymbolItem* oitem = (ObjectSymbolItem*)item;
+  oitem->initValues.push_back(value);
+}
+
+int SymbolTable::getInitValue(std::string* symbolName, std::vector<int> ptrs)
+{
+  SymbolItem* item = this->findSymbol(symbolName);
+  if (item == NULL) {
+    panic("error");
+  }
+  if (item->symbolType != SymbolType::INT_ST && item->symbolType != SymbolType::ARRAY_ST) {
+    panic("error");
+  }
+  ObjectSymbolItem* oitem = (ObjectSymbolItem*)item;
+  int ptr = 0;
+  if (item->type->typeIdtfr ==TypeIdtfr::INTEGER_TI) {
+    return oitem->initValues[ptr];
+  }
+  if (ptrs.size() == 1) {
+    return oitem->initValues[ptrs[0]];
+  }
+  std::vector<int> dims = ((ArrayType*)(item->type))->getDims();
+  return oitem->initValues[ptrs[0] * dims[0] + ptrs[1]];
+}
+
+void SymbolTable::addVarType(std::string* symbolName, Type* type)
+{
+  SymbolItem* item = this->findSymbol(symbolName);
+  item->type = type;
+}
+
 /* ----------------------------- error handler & toString ----------------------------- */
 
 bool SymbolTable::undefSymbolHandler(std::string* symbolName, int line) 
 {
-  Log("in undefSymbolHandler\n");
+  //Log("in undefSymbolHandler\n");
   if (findSymbol(symbolName) == NULL) {
     errorList.addErrorInfo(new ErrorInfo(line, 'c'));
     return true;
@@ -239,7 +281,7 @@ bool SymbolTable::undefSymbolHandler(std::string* symbolName, int line)
 
 void allSymbolTableToString()
 {
-  Log("in allSymbolTableToString\n");
+  //Log("in allSymbolTableToString\n");
   printf("we have %d tables\n", (int)allSymbolTable.size());
   std::map<int, SymbolTable*>::iterator iter;
   for (iter = allSymbolTable.begin(); iter != allSymbolTable.end(); iter++) {
@@ -250,7 +292,7 @@ void allSymbolTableToString()
 bool SymbolTable::funcCallErrorHandler(std::string* funcName, 
   std::vector<ObjectSymbolItem*>* funcCParams, int line)
 {
-  Log("in funcCallErrorHandler\n");
+  //Log("in funcCallErrorHandler\n");
   FuncSymbolItem* f = (FuncSymbolItem*)this->findSymbol(funcName);
   if (f == NULL) {
     return false;
@@ -278,7 +320,7 @@ bool SymbolTable::funcCallErrorHandler(std::string* funcName,
 
 bool SymbolTable::funcReturnCheck(std::string* funcName, bool hasReturnExp, int line)
 {
-  Log("in funcReturnCheck\n");
+  //Log("in funcReturnCheck\n");
   FuncSymbolItem* f = (FuncSymbolItem*)this->findSymbol(funcName);
   if (f == NULL) {
     return false;
@@ -293,7 +335,7 @@ bool SymbolTable::funcReturnCheck(std::string* funcName, bool hasReturnExp, int 
 
 bool SymbolTable::constModifyCheck(LValNode* node)
 {
-  Log("in constModifyCheck\n");
+  //Log("in constModifyCheck\n");
   SymbolItem* item = this->findSymbol(&(node->ident->str));
   if (item == NULL || item->symbolType == SymbolType::FUNC_ST) {
     return false;
@@ -307,7 +349,7 @@ bool SymbolTable::constModifyCheck(LValNode* node)
 
 void SymbolTable::toString(int tabNum)
 {
-  Log("in SymbolTable::toString\n");
+  //Log("in SymbolTable::toString\n");
   tprintf(tabNum,"############################\n");
   tprintf(tabNum, "symbol table id = %d\n", this->tableId);
   if (this->parent != NULL) {

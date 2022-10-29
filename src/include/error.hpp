@@ -4,8 +4,8 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-// ----------- log -----------
-#define ENABLE_LOG 1
+// ----------- Log -----------
+// #define ENABLE_Log 1
 
 #define ANSI_FG_BLACK   "\33[1;30m"
 #define ANSI_FG_RED     "\33[1;31m"
@@ -32,7 +32,7 @@
     fprintf(stderr, __VA_ARGS__); \
   } while (0)
 
-#ifdef ENABLE_LOG
+#ifdef ENABLE_Log
 #define Log(format, ...) \
     _Log(ANSI_FMT("[%s:%d %s] " format, ANSI_FG_BLUE) "\n", \
         __FILE__, __LINE__, __func__, ## __VA_ARGS__)

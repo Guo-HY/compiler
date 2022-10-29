@@ -28,33 +28,33 @@ int main(int argc, char **argv)
 {
   signal(SIGSEGV, SignalHandle);
   FILE* fp = fopen("testfile.txt", "r");
-  freopen("output.txt", "w", stdout);
+  // freopen("output.txt", "w", stdout);
   bool ret;
   if (fp == NULL) {
     panic("can't open source file");
   }
 
-  Lexer*lexer = new Lexer(fp);
+  Lexer* lexer = new Lexer(fp);
   ret = lexer->getAllToken();
   if (ret == false) {
     Log("lexer has something error\n");
     exit(1);
   }
   Parser* parser = new Parser();
-  parser->toString();
+  // parser->toString();
+  parser->syntaxAnalyse();
   Log("after parser");
   // freopen("table.txt", "w", stdout);
   // currentSymbolTable->toString(0);
 
-  freopen("error.txt", "w", stdout);
-  errorList.toString();
+  // freopen("error.txt", "w", stdout);
+  // errorList.toString();
 
   Module* module = compUnit2ir(parser->getRoot(), funcDecls);
   Log("after genIr");
   std::string s = module->toString();
-  freopen("output.ll", "w", stdout);
+  freopen("llvm_ir.txt", "w", stdout);
   printf("%s", s.c_str());
-
 
   return 0;
 }

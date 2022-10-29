@@ -6,6 +6,7 @@
 #include <vector>
 #include <utility>
 #include "syntax_tree.hpp"
+#include "../../ir/ir.hpp"
 
 #define NO_LLVMIRID 0
 
@@ -67,6 +68,12 @@ class SymbolTable {
   int getLlvmIrId(std::string* symbolName);
 
   int getTableId() { return this->tableId; }
+
+  void addInitValue(std::string* symbolName, int value);
+  
+  int getInitValue(std::string* symbolName, std::vector<int> ptrs);
+
+  void addVarType(std::string* symbolName, Type* type);
 
   /* ----------------------------- error handle -----------------------------*/
   /**
@@ -175,10 +182,11 @@ class SymbolItem {
   SymbolType symbolType;
   int line;
   int llvmIrId;
+  Type* type;
 
   SymbolItem() : symbolType(SymbolType::NONE_ST), line(-1) {}
 
-  SymbolItem(SymbolType type, int l) : symbolType(type), line(l), llvmIrId(NO_LLVMIRID) {}
+  SymbolItem(SymbolType type, int l) : symbolType(type), line(l), llvmIrId(NO_LLVMIRID), type(NULL) {}
 
 };
 
@@ -187,6 +195,7 @@ class ObjectSymbolItem : public SymbolItem {
   bool isConst;
   int dimension;
   
+  std::vector<int> initValues;
 
   ObjectSymbolItem() : isConst(false), dimension(0) {
     SymbolItem();

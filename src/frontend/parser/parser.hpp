@@ -48,7 +48,7 @@ class Parser {
    * @return ConstDefNode* 
    */
   ConstDefNode* constDefAnalyse(BTypeNode* bType);
-  ConstInitValNode* constInitValAnalyse();
+  ConstInitValNode* constInitValAnalyse(std::string* name);
   VarDeclNode* varDeclAnalyse();
   /**
    * @brief 
