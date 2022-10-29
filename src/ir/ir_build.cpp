@@ -1,5 +1,6 @@
 #include "ir_build.hpp"
 #include "../include/error.hpp"
+#include <unordered_set>
 /* declare */
 /* 全局符号表 */
 extern SymbolTable* globalSymbolTable;
@@ -15,6 +16,8 @@ std::unordered_map<std::string, GlobalValue*> name2globalValue;
 std::unordered_map<std::string, GlobalValue*> value2stringConst;
 std::vector<BasicBlock*> whileEndBlockStack;
 std::vector<BasicBlock*> whileCondBlockStack;
+std::unordered_set<int> nowFuncLabels;  /* 存放当前函数所有br指令使用的label编号 */
+
 
 bool inFuncCallAnalysis;
 /* --------------------------------------- tools ---------------------------------------  */
@@ -93,6 +96,7 @@ Type* abstVarDef2Type(AbstVarDefNode* node)
     return bType2ir(node->bTypeNode);
   }
   if (node->arrayDimension == 1) {
+    Log("value = %d",node->constExpNodes[0]->getConstValue() );
     return new ArrayType(node->constExpNodes[0]->getConstValue(), bType2ir(node->bTypeNode));
   } else if (node->arrayDimension == 2) {
     ArrayType* tmp = new ArrayType(node->constExpNodes[1]->getConstValue(), bType2ir(node->bTypeNode));
@@ -219,6 +223,10 @@ void genBrInst(BasicBlock* nowBasicBlock, bool isUnCond, Value* ifTrue, Value* i
   inst->iffalse = ifFalse;
   inst->dest = ifTrue;
   nowBasicBlock->instructions.push_back(inst);
+  nowFuncLabels.emplace(((LabelValue*)ifTrue)->id);
+  if (!isUnCond) {
+    nowFuncLabels.emplace(((LabelValue*)ifFalse)->id);
+  }
 }
 
 void genRetInst(BasicBlock* nowBasicBlock,Type* type, Value* value, bool isVoid)
@@ -354,6 +362,7 @@ Function* funcDef2ir(FuncDefNode* node)
 {
   //Log("");
   id2LocalVarAddr.clear();
+  nowFuncLabels.clear();
   updateLlvmIrId(1);
   currentSymbolTable = currentSymbolTable->newSon();
   globalSymbolTable->insertNode(&(node->ident->str), (SyntaxNode*)node, SyntaxNodeType::FUNC_SNT);
@@ -380,18 +389,24 @@ Function* funcDef2ir(FuncDefNode* node)
     }
   }
   nowBasicBlock = block2ir(nowBasicBlock, node->blockNode, false);
-  /* 删除没有语句的block */
+  /* 删除没有语句的block,同时 处理一下 void函数没有return语句的情况 */
   std::vector<BasicBlock*> bbkstmp = function->basicBlocks;
   function->basicBlocks.clear();
   for (u_long i = 0; i < bbkstmp.size(); i++) {
     if (bbkstmp[i]->instructions.size() > 0) {
+      function->basicBlocks.push_back(bbkstmp[i]);
+    } else if (nowFuncLabels.count(bbkstmp[i]->label->id) != 0) {
+      if (function->returnType->typeIdtfr != TypeIdtfr::VOID_TI) {
+        panic("error");
+      }
+      genRetInst(bbkstmp[i], NULL, NULL, true);
       function->basicBlocks.push_back(bbkstmp[i]);
     }
   }
   if (function->basicBlocks.size() == 0) {
     allocBasicBlock();
   }
-
+  /* TODO 似乎没有必要了 */
   /* 处理一下 void函数没有return语句的情况 */
 
   BasicBlock* lastBasicBlock = function->basicBlocks[function->basicBlocks.size() - 1];
@@ -447,12 +462,16 @@ Value* lVal2ir(BasicBlock* nowblk, LValNode* node)
   }
   if (((PointerType*)(addr->type))->pointType->typeIdtfr == TypeIdtfr::POINTER_TI) {
     /* 此时一定是传入的函数参数 */
+    if (node->expNodes.size() == 0) {
+      return addr;
+    }
     addr = genLoadInst(nowblk, addr);
     if (node->expNodes.size() == 1) {
       return genGEPInst(nowblk, addr, ptrType2Type(addr->type), {indexs[1]});
+    } else {
+      return genGEPInst(nowblk, addr, ptrType2Type(addr->type), {indexs[1],indexs[2]});
     }
-    return genGEPInst(nowblk, addr, ptrType2Type(addr->type), {indexs[1],indexs[2]});
-    }
+  }
   /* 此时是局部声明的变量 */
   if (node->expNodes.size() == 1) {
     return genGEPInst(nowblk, addr, ptrType2Type(addr->type), indexs);
@@ -587,9 +606,7 @@ Value* relExp2ir(BasicBlock* nowBasicBlock, BinaryExpNode* node)
     }
     op1 = genIcmpInst(nowBasicBlock, opType, op1, op2);
   }
-  if (node->operands.size() == 1) {
-    op1 = genIcmpInst(nowBasicBlock, ICMPCASE::NE_ICMPCASE, op1, new NumberConstant(0, 32));
-  }
+
   return op1;
 }
 
@@ -613,6 +630,9 @@ Value* eqExp2ir(BasicBlock* nowBasicBlock, BinaryExpNode* node)
     }
     op1 = genIcmpInst(nowBasicBlock, opType, op1, op2);
   }
+  // if (node->operands.size() == 1) {
+  //   op1 = genIcmpInst(nowBasicBlock, ICMPCASE::NE_ICMPCASE, op1, new NumberConstant(0, 32));
+  // }
   return op1;
 }
 
@@ -665,17 +685,18 @@ void varDecl2ir(BasicBlock* nowblk, VarDeclNode* node)
   }
 }
 
-void localConstInitVal2ir(BasicBlock* nowBasicBlock, ConstInitValNode* node, Value* addr)
+void localConstInitVal2ir(BasicBlock* nowBasicBlock, ConstInitValNode* node, Value* addr, std::string* varName)
 {
   if (!node->initArray) {
     int value = node->constExpNode->getConstValue();
+    currentSymbolTable->addInitValue(varName, value);
     Value* initValue = new NumberConstant(value, 32);
     genStoreInst(nowBasicBlock, initValue, addr);
   }
   Value* elemAddr;
   for (u_long i = 0; i < node->constInitValNodes.size(); i++) {
     elemAddr = genGEPInst(nowBasicBlock, addr, ptrType2Type(addr->type), {new NumberConstant(0, 64), new NumberConstant(i, 64)});
-    localConstInitVal2ir(nowBasicBlock,node->constInitValNodes[i], elemAddr);
+    localConstInitVal2ir(nowBasicBlock,node->constInitValNodes[i], elemAddr, varName);
   }
 }
 
@@ -700,9 +721,9 @@ Value* localVarDef2ir(BasicBlock* nowBasicBlock, AbstVarDefNode* node)
 
   VirtRegValue* addr = (VirtRegValue*)genAllocaInst(nowBasicBlock, valueType);
   currentSymbolTable->insertNodeWithLlvmIrId(&(node->ident->str), node, SyntaxNodeType::ABSTVAR_SNT, addr->getId());
-  
+  currentSymbolTable->addVarType(&(node->ident->str), valueType);
   if (node->isConst) {
-    localConstInitVal2ir(nowBasicBlock, ((ConstDefNode*)node)->constInitValNode, addr);
+    localConstInitVal2ir(nowBasicBlock, ((ConstDefNode*)node)->constInitValNode, addr, &(node->ident->str));
   } else if (((VarDefNode*)node)->hasInitVal) {
     localInitVal2ir(nowBasicBlock, ((VarDefNode*)node)->initValNode, addr);
   }
@@ -897,9 +918,17 @@ void lAndExp2ir(BasicBlock* nowblk, BinaryExpNode* node, LabelValue* ifTrueLabel
   for (u_long i = 1; i < node->operands.size(); i++) {
     nextBlock = allocBasicBlock();
     ifTrueLabel = nextBlock->label;
+    if (cond->type->typeIdtfr != TypeIdtfr::INTEGER_TI || 
+        ((IntegerType*)(cond->type))->bitWidth != 1) {
+      cond = genIcmpInst(nowblk, ICMPCASE::NE_ICMPCASE, cond, new NumberConstant(0, 32));
+    }
     genBrInst(nowblk ,false, ifTrueLabel, ifFalseLabel, cond);
     nowblk = nextBlock;
     cond = eqExp2ir(nowblk, node->operands[i]);
+  }
+  if (cond->type->typeIdtfr != TypeIdtfr::INTEGER_TI || 
+        ((IntegerType*)(cond->type))->bitWidth != 1) {
+    cond = genIcmpInst(nowblk, ICMPCASE::NE_ICMPCASE, cond, new NumberConstant(0, 32));
   }
   genBrInst(nowblk ,false, lastIfTrueLabel, ifFalseLabel, cond);
 }

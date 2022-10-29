@@ -27,7 +27,7 @@ static void SignalHandle(int sig);
 int main(int argc, char **argv)
 {
   signal(SIGSEGV, SignalHandle);
-  FILE* fp = fopen("testfile.txt", "r");
+  FILE* fp = fopen("testfile.c", "r");
   // freopen("output.txt", "w", stdout);
   bool ret;
   if (fp == NULL) {
@@ -53,7 +53,7 @@ int main(int argc, char **argv)
   Module* module = compUnit2ir(parser->getRoot(), funcDecls);
   Log("after genIr");
   std::string s = module->toString();
-  freopen("llvm_ir.txt", "w", stdout);
+  freopen("output.ll", "w", stdout);
   printf("%s", s.c_str());
 
   return 0;

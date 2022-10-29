@@ -48,7 +48,7 @@ int AddExpNode::getConstValue()
 int MulExpNode::getConstValue()
 {
   int result = this->unaryExpNodes[0]->getConstValue();
-  for (u_long i = 0; i < this->operands.size(); i++) {
+  for (u_long i = 1; i < this->unaryExpNodes.size(); i++) {
     int tmp = this->unaryExpNodes[i]->getConstValue();
     switch (this->ops[i-1]->tokenType)
     {

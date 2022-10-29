@@ -251,6 +251,9 @@ int SymbolTable::getInitValue(std::string* symbolName, std::vector<int> ptrs)
   }
   ObjectSymbolItem* oitem = (ObjectSymbolItem*)item;
   int ptr = 0;
+  if (item->type == NULL) {
+    panic("error");
+  }
   if (item->type->typeIdtfr ==TypeIdtfr::INTEGER_TI) {
     return oitem->initValues[ptr];
   }

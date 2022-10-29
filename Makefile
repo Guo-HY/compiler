@@ -36,7 +36,7 @@ run: gsc
 	./gsc
 	
 zip:
-	zip -q -r src$(shell date "+%Y.%m.%d").zip src/
+	zip -q -r  src$(shell date "+%Y.%m.%d").zip src/*
 
 ir2asm: 
 	clang output.ll lib/lib.c -o output

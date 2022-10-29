@@ -44,7 +44,7 @@ Value* relExp2ir(BasicBlock* nowBasicBlock, BinaryExpNode* node);
 Value* eqExp2ir(BasicBlock* nowBasicBlock, BinaryExpNode* node);
 Value* constExp2ir(BasicBlock* nowBasicBlock, ConstExpNode* node);
 BasicBlock* block2ir(BasicBlock* nowBasicBlock, BlockNode* node, bool genNewSymbolTable);
-void localConstInitVal2ir(BasicBlock* nowBasicBlock, ConstInitValNode* node, Value* addr);
+void localConstInitVal2ir(BasicBlock* nowBasicBlock, ConstInitValNode* node, Value* addr, std::string* varName);
 void localInitVal2ir(BasicBlock* nowBasicBlock, InitValNode* node, Value* addr);
 Value* localVarDef2ir(BasicBlock* nowBasicBlock, AbstVarDefNode* node);
 BasicBlock* stmt2ir(BasicBlock* nowBasicBlock, StmtNode* node);
