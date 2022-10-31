@@ -39,3 +39,4 @@ gsc
 testcase/
 *.ll
 output
+testfile.c
