@@ -19,7 +19,7 @@ std::vector<BasicBlock*> whileCondBlockStack;
 std::unordered_set<int> nowFuncLabels;  /* 存放当前函数所有br指令使用的label编号 */
 
 
-bool inFuncCallAnalysis;
+int inFuncCallAnalysis;
 /* --------------------------------------- tools ---------------------------------------  */
 
 void updateLlvmIrId(int id)
@@ -120,6 +120,24 @@ Type* funcFParam2Type(AbstVarDefNode* node)
   panic("error");
 }
 
+int getIntegerTypeWidth(Type* type) 
+{
+  if (type->typeIdtfr != TypeIdtfr::INTEGER_TI) {
+    panic("error");
+  }
+  return ((IntegerType*)type)->bitWidth;
+}
+
+void unifyOperandWidth(BasicBlock* nowBasicBlock, Value** op1, Value** op2)
+{
+  int op1Width = getIntegerTypeWidth((*op1)->type);
+  int op2Width = getIntegerTypeWidth((*op2)->type);
+  if (op1Width < op2Width) {
+    *op1 = genZextInst(nowBasicBlock, op2Width, *op1);
+  } else if(op2Width < op1Width) {
+    *op2 = genZextInst(nowBasicBlock, op1Width, *op2);
+  }
+}
 
 /* ---------------------------- gen*Inst 返回的是指令得出的值，指令直接存入nowBasicBlock ---------------------------- */
 
@@ -139,7 +157,7 @@ void genStoreInst(BasicBlock* nowBasicBlock, Value* storeValue, Value* storePtr)
 /* node可以为NULL */
 Value* genCallInst(BasicBlock* nowBasicBlock, std::string funcName, FuncRParamsNode* node)
 {
-  inFuncCallAnalysis = true;
+  inFuncCallAnalysis++;
   CallInst* inst = new CallInst();
   ObjectSymbolItem* item = globalSymbolTable->getFuncReturnType(&funcName);
   Log("item type = %d", item->symbolType);
@@ -164,12 +182,14 @@ Value* genCallInst(BasicBlock* nowBasicBlock, std::string funcName, FuncRParamsN
     }
   }
   nowBasicBlock->instructions.push_back(inst);
-  inFuncCallAnalysis = false;
+  inFuncCallAnalysis--;
   return result;
 }
 
 Value* genBinaryInst(BasicBlock* nowBasicBlock, BinaryInstIdtfr opType, Value* op1, Value* op2)
 {
+  /* 操作前需要统一位宽 */
+  unifyOperandWidth(nowBasicBlock, &op1, &op2);
   VirtRegValue* result = allocVirtReg(op1->type);
   BinaryInst* inst = new BinaryInst(opType);
   inst->op1 = op1;
@@ -195,6 +215,8 @@ Value* genLoadInst(BasicBlock* nowBasicBlock, Value* ptr)
 
 Value* genIcmpInst(BasicBlock* nowBasicBlock, ICMPCASE op, Value* op1, Value* op2)
 {
+  /* 操作前需要统一位宽 */
+  unifyOperandWidth(nowBasicBlock, &op1, &op2);
   IcmpInst* inst = new IcmpInst();
   inst->cond = op;
   inst->op1 = op1;
@@ -610,6 +632,8 @@ Value* relExp2ir(BasicBlock* nowBasicBlock, BinaryExpNode* node)
   return op1;
 }
 
+
+
 /* 返回值的类型为i1 */
 Value* eqExp2ir(BasicBlock* nowBasicBlock, BinaryExpNode* node)
 {
@@ -794,7 +818,7 @@ void dealputstrCall(BasicBlock* nowblk, std::string s, int strLength)
     GlobalInitValue* initValue = new GlobalInitValue(t, new StringConstant(s, t));
     strConst = new GlobalValue(t);
     strConst->isConst = true;
-    strConst->name = "const" + std::to_string(value2stringConst.size());
+    strConst->name = ".const_str" + std::to_string(value2stringConst.size());
     strConst->globalInitValue = initValue;
     value2stringConst[s] = strConst;
   }
@@ -809,22 +833,26 @@ void dealputstrCall(BasicBlock* nowblk, std::string s, int strLength)
 
 void printfStmt2ir(BasicBlock* nowblk, StmtNode* node)
 {
+  /* 需要先解析完printf里的exp，再解析printf的输出语句 */
   const char* str = node->formatString->str.c_str();
   std::string s;
   int expPtr = 0;
   int strLength = 0;
+  std::vector<Value*> exps;
+  for (u_long i = 0; i < node->expNodes.size(); i++) {
+    exps.push_back(exp2ir(nowblk, node->expNodes[i]));
+  }
   for (int i = 1; str[i] != '"'; i++) {
     if (str[i] == '%') {
       i++;
       if (s.length() != 0) {
         dealputstrCall(nowblk, s, strLength + 1); /* +1是因为有\00 */
       }
-      Value* value = exp2ir(nowblk, node->expNodes[expPtr]);
-      expPtr++;
       CallInst* inst = new CallInst();
       inst->returnType = new VoidType();
       inst->name = "putint";
-      inst->args.push_back(value);
+      inst->args.push_back(exps[expPtr]);
+      expPtr++;
       nowblk->instructions.push_back(inst);
       s.clear();
       strLength = 0;
