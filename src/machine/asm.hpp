@@ -43,10 +43,13 @@ class AsmReg : public AsmOperand {
   int physNumber;
 
   AsmReg(bool phys, int n) : AsmOperand(AsmOperandIdtfr::REG_AOI) {
+    this->isPhysReg = phys;
     if (phys) {
       physNumber = n;
+      virtNumber = 0;
     } else {
       virtNumber = n;
+      physNumber = 0;
     }
   }
   std::string toString() override;

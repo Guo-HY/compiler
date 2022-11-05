@@ -47,7 +47,7 @@ void allocVirtRegMem(AsmFunction* func, AsmInst* inst)
         continue;
       }
       if (func->virtRegId2stackOffset.count(reg->virtNumber) == 0) {
-        func->virtRegId2stackOffset[reg->virtNumber] = allocAsmImm(nowSpOffsetWord);
+        func->virtRegId2stackOffset[reg->virtNumber] = allocAsmImm(nowSpOffsetWord * 4);
         nowSpOffsetWord++;
       }
     }
@@ -62,6 +62,7 @@ instRegVirt2phys(AsmFunction* func, AsmBasicBlock* blk, AsmInst* inst, std::list
   AsmInst* newInst;
   std::list<AsmReg*> usdRegPool; 
   AsmReg* writePhyReg = NULL;
+  AsmImm* writeStoreAddr = NULL;
   for (u_long i = 0; i < inst->ops.size(); i++) {
     if (inst->ops[i].first->asmOperandIdtfr != AsmOperandIdtfr::REG_AOI) {
       continue;
@@ -77,8 +78,7 @@ instRegVirt2phys(AsmFunction* func, AsmBasicBlock* blk, AsmInst* inst, std::list
     AsmReg* physReg = freeRegPool.front();
     freeRegPool.pop_front();
     usdRegPool.push_front(physReg);
-    virtReg->isPhysReg = true;
-    virtReg->physNumber = physReg->physNumber;
+    inst->ops[i].first = physReg;
     if (rwp == READ_RWP) {
       AsmImm* spOffset = func->virtRegId2stackOffset[virtReg->virtNumber];
       newInst = new AsmInst(AsmInstIdtfr::LW_AII, {WRR(physReg, spOffset, name2PhysAsmReg["sp"])});
@@ -86,12 +86,13 @@ instRegVirt2phys(AsmFunction* func, AsmBasicBlock* blk, AsmInst* inst, std::list
       it++; /* 使之指向inst */
     }
     if (rwp == WRITE_RWP) {
-      writePhyReg = virtReg;
+      writePhyReg = physReg;
+      writeStoreAddr = func->virtRegId2stackOffset[virtReg->virtNumber];
     }
   }
   it++; /* 指向inst的后一个 */
   if (writePhyReg != NULL) {
-    newInst = new AsmInst(AsmInstIdtfr::SW_AII, {RRR(writePhyReg, func->virtRegId2stackOffset[writePhyReg->virtNumber], name2PhysAsmReg["sp"])});
+    newInst = new AsmInst(AsmInstIdtfr::SW_AII, {RRR(writePhyReg, writeStoreAddr, name2PhysAsmReg["sp"])});
     it = blk->insts.insert(it, newInst);
     it++;
   }

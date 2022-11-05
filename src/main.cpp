@@ -13,6 +13,8 @@
 #include "ir/ir_build.hpp"
 #include "machine/asm.hpp"
 #include "machine/asm_build.hpp"
+#include "machine/reg_allocator.hpp"
+
 
 extern SymbolTable* currentSymbolTable;
 extern ErrorList errorList;
@@ -60,6 +62,8 @@ int main(int argc, char **argv)
 
   freopen("mips.asm", "w", stdout);
   AsmModule* asmModule = module2asm(module);
+  plainRegAllocator(asmModule);
+
   s = asmModule->toString();
   printf("%s", s.c_str());
 

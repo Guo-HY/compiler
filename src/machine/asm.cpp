@@ -15,11 +15,14 @@ char instIdtfr2name[][10] = {
 
 std::string AsmReg::toString()
 {
-  if (this->isPhysReg == false) {
-    panic("error");
-  }
   std::string s;
   s += "$";
+  if (this->isPhysReg == false) {
+    Log("error");
+    s += std::to_string(this->virtNumber);
+    return s;
+  }
+
   s += phyRegNum2name[this->physNumber];
   return s;
 }
@@ -34,7 +37,10 @@ std::string AsmImm::toString()
 
 std::string AsmLabel::toString()
 {
-  return this->label;
+  std::string s;
+  s += "l";
+  s += this->label;
+  return s;
 }
 
 std::string AsmInst::toString()
@@ -97,9 +103,21 @@ std::string AsmInst::toString()
 std::string AsmStrData::toString()
 { 
   std::string s;
+  const char* str = this->str.c_str();
   s += this->label->toString();
   s += ": .asciiz ";  
-  s += this->str;
+  s += "\"";
+  for (int i = 0; str[i] != 0; i++) {
+    if (str[i] == '\\') {
+      if (str[i+2] == 'A') {
+        s += "\\n";
+      }
+      i += 2;
+    } else {
+      s += str[i];
+    }
+  }
+  s += "\"";
   return s;
 }
 
@@ -132,12 +150,12 @@ std::string AsmModule::toString()
     s += "\n";
   }
   s += ".text\n\n";
-  s += "jal main\n j gsc";
+  s += "jal lmain\n j gsc\n";
   for (u_long i = 0; i < this->functions.size(); i++) {
     s += this->functions[i]->toString();
     s += "\n";
   }
-  s += "jsc:";
+  s += "gsc:\n";
   return s;
 }
 

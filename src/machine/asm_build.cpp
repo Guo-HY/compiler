@@ -12,13 +12,17 @@ std::unordered_map<std::string, int> name2regPhysNum {
 /* 保存物理寄存器名到对应AsmReg */
 std::unordered_map<std::string, AsmReg*> name2PhysAsmReg;
 /* 存放输入输出函数需要传给syscall的v0值 */
-static std::unordered_map<std::string, int> ioFunc2v0;
+static std::unordered_map<std::string, int> ioFunc2v0 {
+  {"putint", 1},
+  {"putstr", 4},
+  {"getint", 5},
+};
 
-/* 存放局部变量和函数参数相对sp指针的偏移（用局部变量对应的虚拟寄存器号索引）*/
+/* 存放局部变量和函数参数相对sp指针的偏移（用局部变量对应的虚拟寄存器号索引），字节为单位 */
 static std::unordered_map<int, AsmImm*> virtRegId2stackOffset; 
-/* 暂存函数参数相对于sp指针的偏移（用函数参数对应的虚拟寄存器号索引） */
+/* 暂存函数参数相对于sp指针的偏移（用函数参数对应的虚拟寄存器号索引），字节为单位 */
 static std::unordered_map<int, AsmImm*> funcArgsId2stackOffset;
-/* 当前函数栈大小，first是负数，second是正数 */
+/* 当前函数栈大小，first是负数，second是正数，字节为单位 */
 static std::pair<AsmImm*, AsmImm*> frameSize;
 
 /* 当前处理的函数 */
@@ -191,8 +195,10 @@ AsmFunction* function2asm(Function* function)
   virtRegId2stackOffset.clear();
   funcArgsId2stackOffset.clear();
   nowVirtAsmId = function->maxLlvmIrId + 1;
+  Log("nowVirtAsmId = %d", nowVirtAsmId);
   nowFunction = new AsmFunction(allocAsmLabel(function->funcName));
-  nowblk = new AsmBasicBlock(allocAsmLabel(std::to_string(function->basicBlocks[0]->label->id)));
+  nowblk = new AsmBasicBlock(allocAsmLabel(nowFunction->funcName->label + "." + 
+                      std::to_string(function->basicBlocks[0]->label->id)));
 
   /* 提前遍历一遍function并生成函数参数与局部变量相对于sp的偏移，以及栈大小,
     注意此时栈大小并没有考虑saved reg以及tmp变量 */
@@ -240,7 +246,7 @@ AsmFunction* function2asm(Function* function)
     }
   }
   /* 计算函数参数的地址（相对栈指针的偏移） */
-  int funcFParamOffsetBytes = stackWordSize; /* 函数参数相对于栈指针的起始偏移 */
+  int funcFParamOffsetBytes = stackWordSize * 4; /* 函数参数相对于栈指针的起始偏移 */
   for (u_long i = 0; i < function->funcFParamValues.size(); i++) {
     funcArgsId2stackOffset[function->funcFParamValues[i]->value->getId()] = allocAsmImm(funcFParamOffsetBytes);
     funcFParamOffsetBytes += 4;
@@ -279,7 +285,8 @@ AsmFunction* function2asm(Function* function)
     }
     nowFunction->addBasicBlock(nowblk);
     if (i < function->basicBlocks.size() - 1) {
-      nowblk = new AsmBasicBlock(allocAsmLabel(std::to_string(function->basicBlocks[i+1]->label->id)));
+      nowblk = new AsmBasicBlock(allocAsmLabel(nowFunction->funcName->label + "." + 
+                    std::to_string(function->basicBlocks[i+1]->label->id)));
     }
   }
   nowFunction->frameSize = frameSize;
@@ -294,27 +301,27 @@ void binaryInst2asm( BinaryInst* binaryInst)
   switch (binaryInst->binaryInstType)
   {
   case BinaryInstIdtfr::ADD_BII:
-    idtfr = AsmInstIdtfr::ADDU_AII;
+    idtfr = AsmInstIdtfr::ADDU_AII;   goto lb1;
   case BinaryInstIdtfr::SUB_BII:
-    idtfr = AsmInstIdtfr::SUBU_AII;
+    idtfr = AsmInstIdtfr::SUBU_AII;   goto lb1;
   case BinaryInstIdtfr::AND_BII:
-    idtfr = AsmInstIdtfr::AND_AII;
+    idtfr = AsmInstIdtfr::AND_AII;    goto lb1;
   case BinaryInstIdtfr::OR_BII:
-    idtfr = AsmInstIdtfr::OR_AII;
-
+    idtfr = AsmInstIdtfr::OR_AII;     goto lb1;
+    lb1:
     blockAddInst(idtfr, {WRR(value2asmReg(binaryInst->result),
       value2asmReg(binaryInst->op1),value2asmReg(binaryInst->op2))});
     break;
   case BinaryInstIdtfr::MUL_BII:
     idtfr = AsmInstIdtfr::MULT_AII;
-    idtfr2 = AsmInstIdtfr::MFLO_AII;
+    idtfr2 = AsmInstIdtfr::MFLO_AII;  goto lb2;
   case BinaryInstIdtfr::SDIV_BII:
     idtfr = AsmInstIdtfr::DIV_AII;
-    idtfr2 = AsmInstIdtfr::MFLO_AII;
+    idtfr2 = AsmInstIdtfr::MFLO_AII;  goto lb2;
   case BinaryInstIdtfr::MOD_BII:
     idtfr = AsmInstIdtfr::DIV_AII;
-    idtfr2 = AsmInstIdtfr::MFHI_AII;
-
+    idtfr2 = AsmInstIdtfr::MFHI_AII;  goto lb2;
+    lb2:  
     blockAddInst(idtfr, {RR(value2asmReg(binaryInst->op1),value2asmReg(binaryInst->op2))});
     blockAddInst(idtfr2, {W(value2asmReg(binaryInst->result))});
     break;
@@ -322,7 +329,6 @@ void binaryInst2asm( BinaryInst* binaryInst)
     panic("error");
     break;
   }
-  panic("error");
 }
 
 AsmReg* loadInst2asm( LoadInst* loadInst)
@@ -420,6 +426,7 @@ AsmReg* icmpInst2asm( IcmpInst* icmpInst)
   case ICMPCASE::SLE_ICMPCASE:
     blockAddInst(AsmInstIdtfr::SLT_AII, {WRR(result, op2, op1)});
     blockAddInst(AsmInstIdtfr::SLTIU_AII, {WRR(result, result, imm1)});
+    break;
   default:
     panic("error");
     break;
@@ -429,12 +436,14 @@ AsmReg* icmpInst2asm( IcmpInst* icmpInst)
 
 void brInst2asm( BrInst* brInst)
 {
-  AsmLabel* trueLabel = allocAsmLabel(std::to_string(((LabelValue*)(brInst->iftrue))->id));
+  AsmLabel* trueLabel = allocAsmLabel(nowFunction->funcName->label + "." +
+             std::to_string(((LabelValue*)(brInst->iftrue))->id));
   if (brInst->isUnCond) {
     blockAddInst(AsmInstIdtfr::J_AII, {R(trueLabel)});
     return;
   }
-  AsmLabel* falseLabel = allocAsmLabel(std::to_string(((LabelValue*)(brInst->iffalse))->id));
+  AsmLabel* falseLabel = allocAsmLabel(nowFunction->funcName->label + "." +
+              std::to_string(((LabelValue*)(brInst->iffalse))->id));
   AsmReg* cond = value2asmReg(brInst->cond);
   AsmReg* zero = name2PhysAsmReg["zero"];
   blockAddInst(AsmInstIdtfr::BNE_AII, {RRR(cond, zero, trueLabel)});
@@ -488,8 +497,10 @@ void callInst2asm( CallInst* callInst)
       blockAddInst(AsmInstIdtfr::ADDU_AII, {WRR(name2PhysAsmReg["a0"], 
           name2PhysAsmReg["zero"], value2asmReg(callInst->args[0]))});
     } else if (callInst->name == "putstr") {
-      blockAddInst(AsmInstIdtfr::LA_AII, {WR(name2PhysAsmReg["a0"], 
-        allocAsmLabel(getGlobalValueName(callInst->args[0])))});
+      blockAddInst(AsmInstIdtfr::ADDU_AII, {WRR(name2PhysAsmReg["a0"], 
+      name2PhysAsmReg["zero"], value2asmReg(callInst->args[0]))});
+      // blockAddInst(AsmInstIdtfr::LA_AII, {WR(name2PhysAsmReg["a0"], 
+      //   allocAsmLabel(getGlobalValueName(callInst->args[0])))});
     }
     blockAddInst(AsmInstIdtfr::SYSCALL_AII, {});
     if (callInst->name == "getint") {
