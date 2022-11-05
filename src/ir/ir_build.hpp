@@ -15,6 +15,8 @@ Type* abstVarDef2Type(AbstVarDefNode* node);
 Type* funcFParam2Type(AbstVarDefNode* node);
 int getIntegerTypeWidth(Type* type);
 void unifyOperandWidth(BasicBlock* nowBasicBlock, Value** op1, Value** op2);
+Type* getArrayElemType(Type* type);
+int getArrayElemNum(Type* type);
 
 Value* genAllocaInst(BasicBlock* nowBasicBlock, Type* allocType);
 void genStoreInst(BasicBlock* nowBasicBlock, Value* storeValue, Value* storePtr);

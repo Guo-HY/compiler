@@ -174,8 +174,9 @@ class Function : public Value {
   Type* returnType;
   std::vector<FuncFParamValue*> funcFParamValues;  
   std::vector<BasicBlock*> basicBlocks;
-  
-  Function() : Value(FUNCTION_VI, new FunctionType()), returnType(NULL) {}
+  int maxLlvmIrId;
+
+  Function() : Value(FUNCTION_VI, new FunctionType()), returnType(NULL), maxLlvmIrId(0) {}
   std::string toString() override ;
 };
 
@@ -246,8 +247,9 @@ class GlobalValue : public Value {
   std::string name;
   /* 全局变量的类型,需要为指针类型 */
   bool isConst;
+  bool isconstString;
   GlobalInitValue* globalInitValue; /* 可能为NULL */
-  GlobalValue(Type* t) : Value(GLOBAL_VAR_VI, t), isConst(false), globalInitValue(NULL) {}
+  GlobalValue(Type* t) : Value(GLOBAL_VAR_VI, t), isConst(false), isconstString(false), globalInitValue(NULL) {}
   std::string toString() override ;
   std::string globalDefToString();
 };
@@ -325,7 +327,7 @@ class LoadInst : public Instruction {
 class StoreInst : public Instruction {
   public:
   Value* value;
-  Value* pointer;
+  Value* pointer; /* 可能为寄存器或者全局变量名 */
   StoreInst() : Instruction(STORE_II), value(NULL), pointer(NULL) {}
   StoreInst(Value* v, Value* p) : Instruction(STORE_II), value(v), pointer(p) {}
   std::string toString() override ;
@@ -374,7 +376,7 @@ class IcmpInst : public Instruction {
 
 class CallInst : public Instruction {
   public:
-  Value* result; /* 可能为NULL */
+  Value* result; /* 可能为NULL,为NULL代表没有返回值 */
   Type* returnType;
   std::string name;
   std::vector<Value*> args;

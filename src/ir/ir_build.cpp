@@ -9,17 +9,16 @@ extern SymbolTable* currentSymbolTable;
 
 extern void symbolTableInit();
 
-int nowLlvmIrId;
-Function* nowFunction;
-std::unordered_map<int, VirtRegValue*> id2LocalVarAddr;
-std::unordered_map<std::string, GlobalValue*> name2globalValue;
-std::unordered_map<std::string, GlobalValue*> value2stringConst;
-std::vector<BasicBlock*> whileEndBlockStack;
-std::vector<BasicBlock*> whileCondBlockStack;
-std::unordered_set<int> nowFuncLabels;  /* 存放当前函数所有br指令使用的label编号 */
+static int nowLlvmIrId;
+static Function* nowFunction;
+static std::unordered_map<int, VirtRegValue*> id2LocalVarAddr;
+static std::unordered_map<std::string, GlobalValue*> name2globalValue;
+static std::unordered_map<std::string, GlobalValue*> value2stringConst;
+static std::vector<BasicBlock*> whileEndBlockStack;
+static std::vector<BasicBlock*> whileCondBlockStack;
+static std::unordered_set<int> nowFuncLabels;  /* 存放当前函数所有br指令使用的label编号 */
 
-
-int inFuncCallAnalysis;
+static int inFuncCallAnalysis;
 /* --------------------------------------- tools ---------------------------------------  */
 
 void updateLlvmIrId(int id)
@@ -137,6 +136,22 @@ void unifyOperandWidth(BasicBlock* nowBasicBlock, Value** op1, Value** op2)
   } else if(op2Width < op1Width) {
     *op2 = genZextInst(nowBasicBlock, op1Width, *op2);
   }
+}
+
+Type* getArrayElemType(Type* type)
+{
+  if (type->typeIdtfr != TypeIdtfr::ARRAY_TI) {
+    panic("error");
+  }
+  return ((ArrayType*)type)->elemType;
+}
+
+int getArrayElemNum(Type* type)
+{
+  if (type->typeIdtfr != TypeIdtfr::ARRAY_TI) {
+    panic("error");
+  }
+  return ((ArrayType*)type)->elemNums;
 }
 
 /* ---------------------------- gen*Inst 返回的是指令得出的值，指令直接存入nowBasicBlock ---------------------------- */
@@ -440,6 +455,7 @@ Function* funcDef2ir(FuncDefNode* node)
   }
 
   currentSymbolTable = currentSymbolTable->findParent();
+  function->maxLlvmIrId = nowLlvmIrId + 1;  /* 记录最大的id号，给后端用 */
   return function;
 }
 
@@ -818,6 +834,7 @@ void dealputstrCall(BasicBlock* nowblk, std::string s, int strLength)
     GlobalInitValue* initValue = new GlobalInitValue(t, new StringConstant(s, t));
     strConst = new GlobalValue(t);
     strConst->isConst = true;
+    strConst->isconstString = true;
     strConst->name = ".const_str" + std::to_string(value2stringConst.size());
     strConst->globalInitValue = initValue;
     value2stringConst[s] = strConst;

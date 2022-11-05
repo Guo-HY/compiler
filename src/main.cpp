@@ -11,6 +11,8 @@
 #include "include/error.hpp"
 #include "ir/ir.hpp"
 #include "ir/ir_build.hpp"
+#include "machine/asm.hpp"
+#include "machine/asm_build.hpp"
 
 extern SymbolTable* currentSymbolTable;
 extern ErrorList errorList;
@@ -54,6 +56,11 @@ int main(int argc, char **argv)
   Log("after genIr");
   std::string s = module->toString();
   freopen("output.ll", "w", stdout);
+  printf("%s", s.c_str());
+
+  freopen("mips.asm", "w", stdout);
+  AsmModule* asmModule = module2asm(module);
+  s = asmModule->toString();
   printf("%s", s.c_str());
 
   return 0;

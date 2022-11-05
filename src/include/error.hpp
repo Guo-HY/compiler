@@ -58,4 +58,6 @@
     printf(__VA_ARGS__); \
   } while (0)
 
+#define max(a, b) ((a) < (b) ? (b) : (a))
+
 #endif
