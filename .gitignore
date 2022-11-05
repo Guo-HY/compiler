@@ -40,3 +40,4 @@ testcase/
 *.ll
 output
 testfile.c
+*.asm

@@ -31,6 +31,7 @@ clean:
 	rm -f *.ll
 	rm -f *.out
 	rm -f output
+	rm -f *.asm
 
 run: gsc
 	./gsc
