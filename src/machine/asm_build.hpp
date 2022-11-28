@@ -34,6 +34,6 @@ void brInst2asm( BrInst* brInst);
 void gepInst2asm( GEPInst* gepInst);
 void callInst2asm( CallInst* callInst);
 void retInst2asm( RetInst* retInst);
-
+void zextInst2asm(ZextInst* inst);
 
 #endif

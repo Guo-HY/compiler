@@ -31,7 +31,7 @@ static void SignalHandle(int sig);
 int main(int argc, char **argv)
 {
   signal(SIGSEGV, SignalHandle);
-  FILE* fp = fopen("testfile.c", "r");
+  FILE* fp = fopen("testfile.txt", "r");
   // freopen("output.txt", "w", stdout);
   bool ret;
   if (fp == NULL) {
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
   freopen("output.ll", "w", stdout);
   printf("%s", s.c_str());
 
-  freopen("mips.asm", "w", stdout);
+  freopen("mips.txt", "w", stdout);
   AsmModule* asmModule = module2asm(module);
   plainRegAllocator(asmModule);
 

@@ -160,7 +160,10 @@ AsmGlobalData* globalValue2asm(GlobalValue* globalValue)
     asmGlobalData = new AsmStrData(asmLabel,((StringConstant*)(globalValue->globalInitValue->value))->str);
     return asmGlobalData;
   }
-  int wordNum = getTypeWordSize(globalValue->type);
+  int wordNum = getTypeWordSize(((PointerType*)(globalValue->type))->pointType);
+  // if (globalValue->name == "num") {
+  //   panic("num wordNum=%d", wordNum);
+  // }
   AsmWordData* asmWordData = new AsmWordData(asmLabel, wordNum);
   if (globalValue->globalInitValue == NULL) {
     asmWordData->hasInitValue = false;
@@ -277,7 +280,7 @@ AsmFunction* function2asm(Function* function)
       case InstIdtfr::STORE_II:
         storeInst2asm((StoreInst*)instruction); break;
       case InstIdtfr::ZEXT_II:
-        blockAddInst(AsmInstIdtfr::NOP_AII, {}); break;
+        zextInst2asm((ZextInst*)instruction); break;
       default:
         panic("error");
         break;
@@ -453,16 +456,21 @@ void brInst2asm( BrInst* brInst)
 void gepInst2asm( GEPInst* gepInst)
 {
   /* 如果是ptrval全局变量，需要用la获取地址 */ 
-  AsmReg* baseAddr; /* 基地址寄存器 */
   AsmReg* result = value2asmReg(gepInst->result); /* 最后得到的地址存在这个寄存器里 */
   /* 将baseAddr赋给result */
   /* 如果是全局变量需要先la到result中 */
   if (isGlobalValue(gepInst->ptrval)) {
     blockAddInst(AsmInstIdtfr::LA_AII, {WR(result, allocAsmLabel(getGlobalValueName(gepInst->ptrval)))});
   } else {
-    /* 否则将baseAddr挪到result中 */
-    baseAddr = value2asmReg(gepInst->ptrval);
-    blockAddInst(AsmInstIdtfr::ADDU_AII, {WRR(result, baseAddr, name2PhysAsmReg["zero"])});
+    /* 如果gep的ptrval不在变量表里，就直接将result置为ptrval */
+    if (virtRegId2stackOffset.count(((VirtRegValue*)gepInst->ptrval)->getId()) == 0) {
+      AsmReg* baseAddr = value2asmReg(gepInst->ptrval);
+      blockAddInst(AsmInstIdtfr::ADDU_AII, {WRR(result, name2PhysAsmReg["zero"], baseAddr)});
+    } else {
+      /* 否则需要将result设为sp加栈中的偏移 */
+      AsmImm* offset = virtRegId2stackOffset[((VirtRegValue*)gepInst->ptrval)->getId()];
+      blockAddInst(AsmInstIdtfr::ADDIU_AII, {WRR(result, name2PhysAsmReg["sp"], offset)});
+    }
   }
 
   Type* nowType = gepInst->elemType;
@@ -538,4 +546,11 @@ void retInst2asm( RetInst* retInst)
   blockAddInst(AsmInstIdtfr::ADDIU_AII, {WRR(name2PhysAsmReg["sp"], 
     name2PhysAsmReg["sp"], frameSize.second)});
   blockAddInst(AsmInstIdtfr::JR_AII, {R(name2PhysAsmReg["ra"])});
+}
+
+void zextInst2asm(ZextInst* inst)
+{
+  AsmReg* result = value2asmReg(inst->result);
+  AsmReg* value = value2asmReg(inst->value);
+  blockAddInst(AsmInstIdtfr::ADDU_AII, {WRR(result, value, name2PhysAsmReg["zero"])});
 }

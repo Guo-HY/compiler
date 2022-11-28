@@ -18,7 +18,7 @@ static std::vector<BasicBlock*> whileEndBlockStack;
 static std::vector<BasicBlock*> whileCondBlockStack;
 static std::unordered_set<int> nowFuncLabels;  /* 存放当前函数所有br指令使用的label编号 */
 
-static int inFuncCallAnalysis;
+static int inFuncCallAnalysis;  /* 当前是否在函数调用解析中 */
 /* --------------------------------------- tools ---------------------------------------  */
 
 void updateLlvmIrId(int id)
