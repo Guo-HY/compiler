@@ -24,14 +24,11 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(HEADERS)
 clean:
 	rm -f  *.zip gsc 
 	rm -rf $(OBJ_DIR)
-	rm -f output.txt
-	rm -f token.txt
-	rm -f table.txt
-	rm -f error.txt
 	rm -f *.ll
 	rm -f *.out
 	rm -f output
 	rm -f *.asm
+	rm -f *.txt
 
 run: gsc
 	./gsc

@@ -14,7 +14,7 @@
 #include "machine/asm.hpp"
 #include "machine/asm_build.hpp"
 #include "machine/reg_allocator.hpp"
-
+#include "ir/opt/opt.hpp"
 
 extern SymbolTable* currentSymbolTable;
 extern ErrorList errorList;
@@ -32,8 +32,8 @@ int main(int argc, char **argv)
 {
   signal(SIGSEGV, SignalHandle);
   FILE* fp = fopen("testfile.txt", "r");
-  // freopen("output.txt", "w", stdout);
   bool ret;
+  std::string s;
   if (fp == NULL) {
     panic("can't open source file");
   }
@@ -54,18 +54,23 @@ int main(int argc, char **argv)
   // freopen("error.txt", "w", stdout);
   // errorList.toString();
 
+  /* gen ir */
   Module* module = compUnit2ir(parser->getRoot(), funcDecls);
   Log("after genIr");
-  std::string s = module->toString();
-  freopen("output.ll", "w", stdout);
+  
+  /* ir opt */
+  optir(module);
+  freopen("llvm_ir.txt", "w", stdout);
+  s = module->toString();
   printf("%s", s.c_str());
 
-  freopen("mips.txt", "w", stdout);
-  AsmModule* asmModule = module2asm(module);
-  plainRegAllocator(asmModule);
+  /* gen asm */
+  // freopen("mips.txt", "w", stdout);
+  // AsmModule* asmModule = module2asm(module);
+  // plainRegAllocator(asmModule);
 
-  s = asmModule->toString();
-  printf("%s", s.c_str());
+  // s = asmModule->toString();
+  // printf("%s", s.c_str());
 
   return 0;
 }

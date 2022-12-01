@@ -130,6 +130,6 @@ int LValNode::getConstValue()
     ptrs.push_back(0);
   }
   int value = currentSymbolTable->getInitValue(&(this->ident->str), ptrs);
-  Log("value = %d", value);
+  // Log("value = %d", value);
   return value;
 }

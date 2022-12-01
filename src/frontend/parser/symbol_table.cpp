@@ -228,7 +228,7 @@ void SymbolTable::updateLlvmIrIdById(int oldId, int newId)
 
 void SymbolTable::addInitValue(std::string* symbolName, int value)
 {
-  Log("add value : name is %s, value is %d", symbolName->c_str(), value);
+  // Log("add value : name is %s, value is %d", symbolName->c_str(), value);
   SymbolItem* item = this->findSymbol(symbolName);
   if (item == NULL) {
     panic("error");

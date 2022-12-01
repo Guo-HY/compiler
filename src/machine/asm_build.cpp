@@ -198,7 +198,7 @@ AsmFunction* function2asm(Function* function)
   virtRegId2stackOffset.clear();
   funcArgsId2stackOffset.clear();
   nowVirtAsmId = function->maxLlvmIrId + 1;
-  Log("nowVirtAsmId = %d", nowVirtAsmId);
+  // Log("nowVirtAsmId = %d", nowVirtAsmId);
   nowFunction = new AsmFunction(allocAsmLabel(function->funcName));
   nowblk = new AsmBasicBlock(allocAsmLabel(nowFunction->funcName->label + "." + 
                       std::to_string(function->basicBlocks[0]->label->id)));
@@ -212,8 +212,7 @@ AsmFunction* function2asm(Function* function)
   int maxFuncCallArgsWordSize = 0;  /* 最大函数参数栈空间字个数 */
   for (u_long i = 0; i < function->basicBlocks.size(); i++) {
     BasicBlock* basicBlock = function->basicBlocks[i];
-    for (u_long j = 0; j < basicBlock->instructions.size(); j++) {
-      Instruction* instruction = basicBlock->instructions[j];
+    for (Instruction* instruction : basicBlock->instructions) {
       if (instruction->instType == InstIdtfr::CALL_II) {
         int tmp = funcCallArgsWordSize((CallInst*)instruction);
         maxFuncCallArgsWordSize = max(tmp, maxFuncCallArgsWordSize);
@@ -239,10 +238,9 @@ AsmFunction* function2asm(Function* function)
   /* 对局部变量在栈上分配空间 */
   for (u_long i = 0; i < function->basicBlocks.size(); i++) {
     BasicBlock* basicBlock = function->basicBlocks[i];
-    for (u_long j = 0; j < basicBlock->instructions.size(); j++) {
-      Instruction* instruction = basicBlock->instructions[j];
+    for (Instruction* instruction : basicBlock->instructions) {
       if (instruction->instType == InstIdtfr::ALLOCA_II) {
-        int virtRegId = ((AllocaInst*)instruction)->result->getId();
+        int virtRegId = ((VirtRegValue*)(((AllocaInst*)instruction)->result))->getId();
         virtRegId2stackOffset[virtRegId] = allocAsmImm(spOffsetBytes); /* 变量在栈中的起始地址相对栈指针的偏移 */
         spOffsetBytes += 4 * getTypeWordSize(((AllocaInst*)instruction)->allocType);
       }
@@ -251,14 +249,13 @@ AsmFunction* function2asm(Function* function)
   /* 计算函数参数的地址（相对栈指针的偏移） */
   int funcFParamOffsetBytes = stackWordSize * 4; /* 函数参数相对于栈指针的起始偏移 */
   for (u_long i = 0; i < function->funcFParamValues.size(); i++) {
-    funcArgsId2stackOffset[function->funcFParamValues[i]->value->getId()] = allocAsmImm(funcFParamOffsetBytes);
+    funcArgsId2stackOffset[((VirtRegValue*)(function->funcFParamValues[i]->value))->getId()] = allocAsmImm(funcFParamOffsetBytes);
     funcFParamOffsetBytes += 4;
   }
 
   for (u_long i = 0; i < function->basicBlocks.size(); i++) {
     BasicBlock* basicBlock = function->basicBlocks[i];
-    for (u_long j = 0; j < basicBlock->instructions.size(); j++) {
-      Instruction* instruction = basicBlock->instructions[j];
+    for (Instruction* instruction : basicBlock->instructions) {
       switch (instruction->instType)
       {
       case InstIdtfr::ALLOCA_II:

@@ -2,6 +2,7 @@
 #define _IR_H 1
 #include <vector>
 #include <string>
+#include <list>
 // #include "../frontend/parser/symbol_table.hpp"
 
 class Type;
@@ -180,14 +181,28 @@ class Function : public Value {
   std::string toString() override ;
 };
 
+class LabelValue : public Value {
+  public:
+  int id;
+  LabelValue() : Value(LABEL_VI, new LabelType()), id(0) {}
+  LabelValue(int _id) : Value(LABEL_VI, new LabelType()), id(_id) {}
+  std::string toString() override;
+  int getId() {
+    return this->id;
+  }
+};
+
 class BasicBlock : public Value {
   public:
   LabelValue* label;
-  std::vector<Instruction*> instructions;
+  std::list<Instruction*> instructions;
 
   BasicBlock() : Value(BASICBLOCK_VI, new OtherType()), label(NULL) {}
   BasicBlock(LabelValue* lv) : Value(BASICBLOCK_VI, new OtherType()), label(lv) {}
   std::string toString() override ;
+  int getId() {
+    return this->label->id;
+  }
 };
 
 
@@ -207,14 +222,6 @@ class StringConstant : public Value {
   std::string toString() override ;
 };
 
-
-class LabelValue : public Value {
-  public:
-  int id;
-  LabelValue() : Value(LABEL_VI, new LabelType()), id(0) {}
-  LabelValue(int _id) : Value(LABEL_VI, new LabelType()), id(_id) {}
-  std::string toString() override;
-};
 
 class VirtRegValue : public Value {
   public:
@@ -236,7 +243,7 @@ class VirtRegValue : public Value {
 
 class FuncFParamValue : public Value {
   public:
-  VirtRegValue* value;  
+  Value* value;  
 
   FuncFParamValue(Type* t, VirtRegValue* v) : Value(FUNCFPARAM_VI, t), value(v) {}
   std::string toString() override ;
@@ -279,6 +286,7 @@ enum InstIdtfr {
   ZEXT_II,
   BR_II,
   RET_II,
+  PHI_II,
 };
 
 class Instruction : public Value {
@@ -287,6 +295,7 @@ class Instruction : public Value {
 
   Instruction(InstIdtfr i) : Value(INSTRUCTION_VI, new OtherType()), instType(i) {}
   virtual std::string toString() = 0;
+  virtual void updateUseValue(Value* oldv, Value* newv) = 0;
 };
 
 enum BinaryInstIdtfr {
@@ -305,23 +314,26 @@ class BinaryInst : public Instruction {
   Value *op1, *op2, *result;
   BinaryInst(BinaryInstIdtfr b) : Instruction(BINARY_II), binaryInstType(b), op1(NULL), op2(NULL), result(NULL) {}
   std::string toString() override ;
+  void updateUseValue(Value* oldv, Value* newv) override;
 };
 
 class AllocaInst : public Instruction {
   public:
   Type* allocType;
-  VirtRegValue* result;
+  Value* result;
   AllocaInst() : Instruction(ALLOCA_II), allocType(NULL), result(NULL) {}
   AllocaInst(Type* t, VirtRegValue* r) : Instruction(ALLOCA_II), allocType(t), result(r) {}
   std::string toString() override ;
+  void updateUseValue(Value* oldv, Value* newv) override;
 };
 
 class LoadInst : public Instruction {
   public:
   Value* pointer; /* 可能为寄存器或者全局变量名 */
-  VirtRegValue* result;
+  Value* result;
   LoadInst() : Instruction(LOAD_II), pointer(NULL), result(NULL) {}
   std::string toString() override ;
+  void updateUseValue(Value* oldv, Value* newv) override;
 };
 
 class StoreInst : public Instruction {
@@ -331,6 +343,7 @@ class StoreInst : public Instruction {
   StoreInst() : Instruction(STORE_II), value(NULL), pointer(NULL) {}
   StoreInst(Value* v, Value* p) : Instruction(STORE_II), value(v), pointer(p) {}
   std::string toString() override ;
+  void updateUseValue(Value* oldv, Value* newv) override;
 };
 
 class GEPInst : public Instruction {
@@ -343,6 +356,7 @@ class GEPInst : public Instruction {
 
   GEPInst() : Instruction(GEP_II), result(NULL), elemType(NULL), elemTypePointer(NULL), ptrval(NULL) {}
   std::string toString() override ;
+  void updateUseValue(Value* oldv, Value* newv) override;
 };
 
 class ZextInst : public Instruction {
@@ -350,6 +364,7 @@ class ZextInst : public Instruction {
   Value *result, *value;
   ZextInst() : Instruction(ZEXT_II), result(NULL), value(NULL) {}
   std::string toString() override ;
+  void updateUseValue(Value* oldv, Value* newv) override;
 };
 
 enum ICMPCASE {
@@ -372,6 +387,7 @@ class IcmpInst : public Instruction {
   Value *op1,*op2,*result;
   IcmpInst() : Instruction(ICMP_II), cond(NONE_ICMPCASE), op1(NULL), op2(NULL), result(NULL) {}
   std::string toString() override ;
+  void updateUseValue(Value* oldv, Value* newv) override;
 };
 
 class CallInst : public Instruction {
@@ -382,6 +398,7 @@ class CallInst : public Instruction {
   std::vector<Value*> args;
   CallInst() : Instruction(CALL_II), result(NULL), returnType(NULL) {}
   std::string toString() override ;
+  void updateUseValue(Value* oldv, Value* newv) override;
 };
 
 class RetInst : public Instruction {
@@ -391,14 +408,27 @@ class RetInst : public Instruction {
   Value* value; /* 可能为NULL */
   RetInst() : Instruction(RET_II), isVoid(false), returnType(NULL), value(NULL) {}
   std::string toString() override ;
+  void updateUseValue(Value* oldv, Value* newv) override;
 };
 
 class BrInst : public Instruction {
   public:
   bool isUnCond;
-  Value *iftrue, *iffalse, *dest, *cond;
+  Value *iftrue, *iffalse, *dest, *cond; /* 如果是无条件跳转则跳转地址为dest */
   BrInst() : Instruction(BR_II), isUnCond(false), iftrue(NULL), iffalse(NULL), dest(NULL), cond(NULL) {}
   std::string toString() override ;
+  void updateUseValue(Value* oldv, Value* newv) override;
+};
+
+class PhiInst : public Instruction {
+  public:
+  int varAddrRegId; /* ls形式的ir中保存局部int变量地址的的虚拟寄存器号 */
+  std::vector<std::pair<Value*, LabelValue*>> vardefs; /* 一系列到达定义 */
+  Value* result; /* phi指令的结果虚拟寄存器 */
+
+  PhiInst() : Instruction(PHI_II), varAddrRegId(0), result(NULL) {}
+  std::string toString() override ;
+  void updateUseValue(Value* oldv, Value* newv) override;
 };
 
 

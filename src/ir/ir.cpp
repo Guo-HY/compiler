@@ -263,6 +263,27 @@ std::string BrInst::toString()
   return s;
 }
 
+std::string PhiInst::toString()
+{
+  std::string s;
+  s += "\t";
+  s += this->result->toString();
+  s += " = phi i32 ";
+  for (u_long i = 0; i < this->vardefs.size(); i++) {
+    std::pair<Value*, LabelValue*> it = this->vardefs[i];
+    s += "[ ";
+    s += it.first->toString();
+    s += ", %";
+    s += it.second->toString();
+    s += " ]";
+    if (i < this->vardefs.size() - 1) {
+      s += ", ";
+    }
+  }
+  s += "\n";
+  return s;
+}
+
 
 std::string BasicBlock::toString()
 {
@@ -272,8 +293,8 @@ std::string BasicBlock::toString()
   std::string s;
   s += this->label->toString();
   s += ":\n\n";
-  for (u_long i = 0; i < this->instructions.size(); i++) {
-    s += this->instructions[i]->toString();
+  for (Instruction* inst : this->instructions) {
+    s += inst->toString();
   }
   s += "\n";
   return s;
@@ -375,4 +396,85 @@ std::string Module::toString()
     s += this->funcDef[i]->toString();
   }
   return s;
+}
+
+void BinaryInst::updateUseValue(Value* oldv, Value* newv)
+{
+  if (op1 == oldv) {
+    op1 = newv;
+  }
+  if (op2 == oldv) {
+    op2 = newv;
+  }
+}
+
+void AllocaInst::updateUseValue(Value* oldv, Value* newv)
+{
+}
+
+void LoadInst::updateUseValue(Value* oldv, Value* newv)
+{
+}
+
+void StoreInst::updateUseValue(Value* oldv, Value* newv)
+{
+  if (value == oldv) {
+    value = newv;
+  }
+}
+
+void GEPInst::updateUseValue(Value* oldv, Value* newv)
+{
+  if (ptrval == oldv) {
+    ptrval = newv;
+  }
+  for (u_long i = 0; i < indexs.size(); i++) {
+    if (indexs[i] == oldv) {
+      indexs[i] = newv;
+    }
+  }
+}
+
+void ZextInst::updateUseValue(Value* oldv, Value* newv)
+{
+  if (value == oldv) {
+    value = newv;
+  }
+}
+
+void IcmpInst::updateUseValue(Value* oldv, Value* newv)
+{
+  if (op1 == oldv) {
+    op1 = newv;
+  }
+  if (op2 == oldv) {
+    op2 = newv;
+  }
+}
+
+void CallInst::updateUseValue(Value* oldv, Value* newv)
+{
+  for (u_long i = 0; i < args.size(); i++) {
+    if (args[i] == oldv) {
+      args[i] = newv;
+    }
+  }
+}
+
+void RetInst::updateUseValue(Value* oldv, Value* newv)
+{
+  if (value == oldv) {
+    value = newv;
+  }
+}
+
+void BrInst::updateUseValue(Value* oldv, Value* newv)
+{
+  if (cond == oldv) {
+    cond = newv;
+  }
+}
+
+void PhiInst::updateUseValue(Value* oldv, Value* newv)
+{
 }

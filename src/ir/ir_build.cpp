@@ -72,7 +72,7 @@ bool bblkHasTermiInst(BasicBlock* bblk)
     return false;
   }
 
-  Instruction* inst = bblk->instructions[bblk->instructions.size() - 1];
+  Instruction* inst = bblk->instructions.back();
   if (inst == NULL) {
     panic("error");
   }
@@ -95,7 +95,7 @@ Type* abstVarDef2Type(AbstVarDefNode* node)
     return bType2ir(node->bTypeNode);
   }
   if (node->arrayDimension == 1) {
-    Log("value = %d",node->constExpNodes[0]->getConstValue() );
+    // Log("value = %d",node->constExpNodes[0]->getConstValue() );
     return new ArrayType(node->constExpNodes[0]->getConstValue(), bType2ir(node->bTypeNode));
   } else if (node->arrayDimension == 2) {
     ArrayType* tmp = new ArrayType(node->constExpNodes[1]->getConstValue(), bType2ir(node->bTypeNode));
@@ -175,7 +175,7 @@ Value* genCallInst(BasicBlock* nowBasicBlock, std::string funcName, FuncRParamsN
   inFuncCallAnalysis++;
   CallInst* inst = new CallInst();
   ObjectSymbolItem* item = globalSymbolTable->getFuncReturnType(&funcName);
-  Log("item type = %d", item->symbolType);
+  // Log("item type = %d", item->symbolType);
   if (item->symbolType == SymbolType::INT_ST) {
     inst->returnType = new IntegerType(32);
   } else {
@@ -353,7 +353,7 @@ GlobalInitValue* globalConstInitVal2ir(std::string* varName, ConstInitValNode* n
 {
   if (node->initArray == false) {
     GlobalInitValue* globalInitValue = new GlobalInitValue(new IntegerType(32), new NumberConstant(node->constExpNode->getConstValue(), 32));
-    Log("%s, addInitValue = %d, again %d",varName->c_str(), node->constExpNode->getConstValue(), node->constExpNode->getConstValue());
+    // Log("%s, addInitValue = %d, again %d",varName->c_str(), node->constExpNode->getConstValue(), node->constExpNode->getConstValue());
     currentSymbolTable->addInitValue(varName, node->constExpNode->getConstValue());
     return globalInitValue;
   }
