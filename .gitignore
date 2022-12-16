@@ -41,3 +41,4 @@ testcase/
 output
 testfile.c
 *.asm
+test.cpp

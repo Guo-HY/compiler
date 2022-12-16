@@ -10,7 +10,7 @@ char phyRegNum2name[][10] = {
 char instIdtfr2name[][10] = {
   "none ", "add ", "addu ", "addiu ", "sub ", "subu ", "mult ", "div ", "xor ", 
   "and ", "or ", "mfhi ", "mflo ", "lw ", "sw ", "nop ", "j ", "bne ", "jr ", 
-  "sltiu ", "sltu ", "slt ", "la ", "jal ", "syscall ",
+  "sltiu ", "sltu ", "slt ", "la ", "jal ", "syscall ", "",
 };
 
 std::string AsmReg::toString()
@@ -18,7 +18,8 @@ std::string AsmReg::toString()
   std::string s;
   s += "$";
   if (this->isPhysReg == false) {
-    Log("error");
+    Log("may has error");
+    s += "virt";
     s += std::to_string(this->virtNumber);
     return s;
   }
@@ -49,6 +50,7 @@ std::string AsmInst::toString()
   s += "\t";
   s += instIdtfr2name[this->asmInstIdtfr];
   s += " ";
+  AsmPhiInst* phiInst;
   switch (this->asmInstIdtfr)
   {
   case AsmInstIdtfr::NOP_AII:
@@ -85,6 +87,19 @@ std::string AsmInst::toString()
     s += "(";
     s += this->ops[2].first->toString();
     s += ")";
+    break;
+  case AsmInstIdtfr::PHI_AII:
+    phiInst = (AsmPhiInst*)this;
+    s += "#";
+    s += phiInst->result->toString();
+    s += " = phi ";
+    for (std::pair<AsmOperand*, AsmLabel*> it : phiInst->varDefs) {
+      s += "[";
+      s += it.first->toString();
+      s += ", ";
+      s += it.second->toString();
+      s += "], ";
+    } 
     break;
   default:
     if (this->ops.size() != 3) {

@@ -1,7 +1,7 @@
 #include "opt.hpp"
 
 /* 获取终结指令指向的基本块 */
-std::vector<int> getTermInstPointed(Instruction* inst)
+static std::vector<int> getTermInstPointed(Instruction* inst)
 {
   std::vector<int> pointed;
   if (inst->instType == InstIdtfr::RET_II) {
@@ -22,7 +22,7 @@ std::vector<int> getTermInstPointed(Instruction* inst)
 }
 
 /* 求CFG */
-void calFunctionCfg(FunctionOptMsg* funcOptMsg)
+static void calFunctionCfg(FunctionOptMsg* funcOptMsg)
 {
   Function* func = funcOptMsg->func;
   for (int i = 0 ; i < func->basicBlocks.size(); i++) {
@@ -37,7 +37,7 @@ void calFunctionCfg(FunctionOptMsg* funcOptMsg)
 }
 
 /* 求每个基本块的严格支配 */
-void calStrictlyDominated(FunctionOptMsg* funcMsg)
+static void calStrictlyDominated(FunctionOptMsg* funcMsg)
 {
   std::set<int> survivor; /* 存放bfs遍历到的节点 */
   for (std::pair<int, BasicBlockOptMsg*> it0 : funcMsg->id2bblk) {
@@ -58,7 +58,7 @@ void calStrictlyDominated(FunctionOptMsg* funcMsg)
 
 /* 求每个基本块的直接支配者,入口块没有直接支配者 */
 /* A的直接支配者是支配A的块集合中dom集最小的 */
-void calIdom(FunctionOptMsg* funcMsg) 
+static void calIdom(FunctionOptMsg* funcMsg) 
 {
   BasicBlockOptMsg* idom = NULL;
   int nowIdomDominatedSize = 0;
@@ -82,7 +82,7 @@ void calIdom(FunctionOptMsg* funcMsg)
 
 
 /* 求每个节点的支配边界 */
-void calDF(FunctionOptMsg* funcMsg)
+static void calDF(FunctionOptMsg* funcMsg)
 {
   for (std::pair<int, std::vector<int>*> links : funcMsg->cfgGraph) {
     int a = links.first;
@@ -102,7 +102,7 @@ void calDF(FunctionOptMsg* funcMsg)
 }
 
 /* 前序遍历支配树 */
-void preorderTraversalDT(std::vector<BasicBlockOptMsg*>* bblkMsgs, BasicBlockOptMsg* nowBblk)
+static void preorderTraversalDT(std::vector<BasicBlockOptMsg*>* bblkMsgs, BasicBlockOptMsg* nowBblk)
 {
   bblkMsgs->push_back(nowBblk);
   for (BasicBlockOptMsg* it : nowBblk->idomds) {
@@ -110,7 +110,7 @@ void preorderTraversalDT(std::vector<BasicBlockOptMsg*>* bblkMsgs, BasicBlockOpt
   }
 }
 
-void calVarDefUse(FunctionOptMsg* funcMsg)
+static void calVarDefUse(FunctionOptMsg* funcMsg)
 {
   /* 按照前序遍历支配树顺序 */
   std::vector<BasicBlockOptMsg*> bblkMsgs;
@@ -142,7 +142,7 @@ void calVarDefUse(FunctionOptMsg* funcMsg)
   }
 }
 
-void insertPhi(FunctionOptMsg* funcMsg)
+static void insertPhi(FunctionOptMsg* funcMsg)
 {
   /* set of basic blocks where phi is added */
   std::set<BasicBlockOptMsg*> F;  
@@ -174,7 +174,7 @@ void insertPhi(FunctionOptMsg* funcMsg)
   }
 }
 
-void updateInstUseValue(std::list<Instruction*>::iterator it, 
+static void updateInstUseValue(std::list<Instruction*>::iterator it, 
   std::list<Instruction*>* insts, Value* oldv, Value* newv)
 {
   for ( ; it != insts->end(); it++) {
@@ -183,7 +183,7 @@ void updateInstUseValue(std::list<Instruction*>::iterator it,
 }
 
 /* 变量重命名 */
-void varRenaming(FunctionOptMsg* funcMsg)
+static void varRenaming(FunctionOptMsg* funcMsg)
 {
   /* 按照前序遍历支配树的顺序遍历基本块,结果存在bblkMsgs中 */
   std::vector<BasicBlockOptMsg*> bblkMsgs;
@@ -206,7 +206,6 @@ void varRenaming(FunctionOptMsg* funcMsg)
         if (funcMsg->varAddrRegId2defBblk.count(addrReg->getId()) != 0) {
           // Log("before delete load");
           /* load出来的一定是一个寄存器,但是变量的到达定义不一定是寄存器 */
-          Log("before this");
           Value* reachdefValue = bblkMsg->getReachDefValue(addrReg->getId());
           /* 如果reachdefValue是寄存器，那么直接改编号就可以了 */
           if (isVirtRegValue(reachdefValue)) {
@@ -246,7 +245,6 @@ void varRenaming(FunctionOptMsg* funcMsg)
     for (int bblkId : *succeeds) {
       BasicBlockOptMsg* succeedBblk = funcMsg->id2bblk[bblkId];
       for (PhiInst* phiInst : succeedBblk->phiInsts) {
-        Log("before this");
         Value* reachdefValue = bblkMsg->getReachDefValue(phiInst->varAddrRegId);
         if (reachdefValue != NULL) {
           phiInst->vardefs.push_back({reachdefValue, bblkMsg->bblk->label});
@@ -257,14 +255,93 @@ void varRenaming(FunctionOptMsg* funcMsg)
   }
 }
 
-void printCFGLog(FILE* fp, FunctionOptMsg* funcOptMsg);
-void printStrictlyDominated(FILE* fp, FunctionOptMsg* funcOptMsg);
-void printVarDefUse(FILE* fp, FunctionOptMsg* funcOptMsg);
-void printIdom(FILE* fp, FunctionOptMsg* funcOptMsg);
-void printDF(FILE* fp, FunctionOptMsg* funcOptMsg);
-void printInsertPhi(FILE* fp, FunctionOptMsg* funcOptMsg);
+// void printCFGLog(FILE* fp, FunctionOptMsg* funcOptMsg);
+// void printStrictlyDominated(FILE* fp, FunctionOptMsg* funcOptMsg);
+// void printVarDefUse(FILE* fp, FunctionOptMsg* funcOptMsg);
+// void printIdom(FILE* fp, FunctionOptMsg* funcOptMsg);
+// void printDF(FILE* fp, FunctionOptMsg* funcOptMsg);
+// void printInsertPhi(FILE* fp, FunctionOptMsg* funcOptMsg);
+
+static void printCFGLog(FILE* fp, FunctionOptMsg* funcOptMsg)
+{
+  fprintf(fp, "cfg ------------------------\n");
+  for (std::pair<int, std::vector<int>*> it0 : funcOptMsg->cfgGraph) {
+    for (int it1 : *(it0.second)) {
+      fprintf(fp, "%d -> %d ", it0.first, it1);
+    }
+    fprintf(fp, "\n");
+  }
+  fprintf(fp, "---------------------------\n");
+}
+
+static void printStrictlyDominated(FILE* fp, FunctionOptMsg* funcOptMsg)
+{
+  fprintf(fp, "StrictlyDominated & dominaterStrictly ------------------------\n");
+  for (std::pair<int, BasicBlockOptMsg*> it0 : funcOptMsg->id2bblk) {
+    fprintf(fp, "block id = %d, StrictlyDominated = ", it0.first);
+    for (std::pair<int, BasicBlockOptMsg*> it1 : it0.second->strictlyDominated) {
+      fprintf(fp , " %d ",it1.first);
+    }
+    fprintf(fp, ", dominaterStrictly = ");
+    for (std::pair<int, BasicBlockOptMsg*> it1 : it0.second->dominaterStrictly) {
+      fprintf(fp , " %d ",it1.first);
+    }
+    fprintf(fp, "\n");
+  }
+  fprintf(fp, "---------------------------\n");
+}
+
+static void printVarDefUse(FILE* fp, FunctionOptMsg* funcOptMsg) 
+{
+  fprintf(fp, "varDefUse-----------------------\n");
+  for (std::pair<int, std::set<BasicBlockOptMsg*>*> it0 : funcOptMsg->varAddrRegId2defBblk) {
+    fprintf(fp, "var addr = %d , def block = ", it0.first);
+    for (BasicBlockOptMsg* it1 : *(it0.second)) {
+      fprintf(fp, "  %d ", it1->bblk->getId());
+    }
+    fprintf(fp, "\n");
+  } 
+  fprintf(fp, "---------------------------\n");
+}
+
+static void printIdom(FILE* fp, FunctionOptMsg* funcOptMsg)
+{
+  fprintf(fp, "idom---------------------\n");
+  for (std::pair<int, BasicBlockOptMsg*> it0 : funcOptMsg->id2bblk) {
+    if (it0.second->idom == NULL) {
+      fprintf(fp, "block id = %d, no idom\n",it0.second->bblk->getId());
+      continue;
+    }
+    fprintf(fp, "block id = %d, idom = %d\n", it0.second->bblk->getId(), 
+      it0.second->idom->bblk->getId());
+  }
+}
+
+static void printDF(FILE* fp, FunctionOptMsg* funcOptMsg)
+{
+  fprintf(fp, "DF ---------------------\n");
+  for (std::pair<int, BasicBlockOptMsg*> it0 : funcOptMsg->id2bblk) {
+    fprintf(fp, "block id = %d, DF = ", it0.second->bblk->getId());
+    for (std::pair<int, BasicBlockOptMsg*> it1 : it0.second->DF) {
+      fprintf(fp, " %d ", it1.first);
+    }
+    fprintf(fp, "\n");
+  }
+}
+
+static void printInsertPhi(FILE* fp, FunctionOptMsg* funcOptMsg)
+{
+  fprintf(fp, "insertPhi---------------------\n");
+  for (std::pair<int, BasicBlockOptMsg*> it0 : funcOptMsg->id2bblk) {
+    fprintf(fp, "block id = %d ,phi inst : ", it0.first);
+    for (PhiInst* inst : it0.second->phiInsts) {
+      fprintf(fp, " varAddr=%d, ", inst->varAddrRegId);
+    }
+    fprintf(fp, "\n");
+  }
+}
 /* 以函数为单位进行mem2reg */
-void funcMem2reg(Function* func)
+static void funcMem2reg(Function* func)
 {
   // FILE* fp = fopen("mem2reg.log", "w");
   // fprintf(fp, "func name = %s\n", func->funcName.c_str());
@@ -346,83 +423,4 @@ void BasicBlockOptMsg::addPhiInst(int vAddrId) {
     this->phiInsts.push_back(inst);
     /* 同时初始化到达定义 */
     this->reachdef[vAddrId] = inst->result;
-}
-
-void printCFGLog(FILE* fp, FunctionOptMsg* funcOptMsg)
-{
-  fprintf(fp, "cfg ------------------------\n");
-  for (std::pair<int, std::vector<int>*> it0 : funcOptMsg->cfgGraph) {
-    for (int it1 : *(it0.second)) {
-      fprintf(fp, "%d -> %d ", it0.first, it1);
-    }
-    fprintf(fp, "\n");
-  }
-  fprintf(fp, "---------------------------\n");
-}
-
-void printStrictlyDominated(FILE* fp, FunctionOptMsg* funcOptMsg)
-{
-  fprintf(fp, "StrictlyDominated & dominaterStrictly ------------------------\n");
-  for (std::pair<int, BasicBlockOptMsg*> it0 : funcOptMsg->id2bblk) {
-    fprintf(fp, "block id = %d, StrictlyDominated = ", it0.first);
-    for (std::pair<int, BasicBlockOptMsg*> it1 : it0.second->strictlyDominated) {
-      fprintf(fp , " %d ",it1.first);
-    }
-    fprintf(fp, ", dominaterStrictly = ");
-    for (std::pair<int, BasicBlockOptMsg*> it1 : it0.second->dominaterStrictly) {
-      fprintf(fp , " %d ",it1.first);
-    }
-    fprintf(fp, "\n");
-  }
-  fprintf(fp, "---------------------------\n");
-}
-
-void printVarDefUse(FILE* fp, FunctionOptMsg* funcOptMsg) 
-{
-  fprintf(fp, "varDefUse-----------------------\n");
-  for (std::pair<int, std::set<BasicBlockOptMsg*>*> it0 : funcOptMsg->varAddrRegId2defBblk) {
-    fprintf(fp, "var addr = %d , def block = ", it0.first);
-    for (BasicBlockOptMsg* it1 : *(it0.second)) {
-      fprintf(fp, "  %d ", it1->bblk->getId());
-    }
-    fprintf(fp, "\n");
-  } 
-  fprintf(fp, "---------------------------\n");
-}
-
-void printIdom(FILE* fp, FunctionOptMsg* funcOptMsg)
-{
-  fprintf(fp, "idom---------------------\n");
-  for (std::pair<int, BasicBlockOptMsg*> it0 : funcOptMsg->id2bblk) {
-    if (it0.second->idom == NULL) {
-      fprintf(fp, "block id = %d, no idom\n",it0.second->bblk->getId());
-      continue;
-    }
-    fprintf(fp, "block id = %d, idom = %d\n", it0.second->bblk->getId(), 
-      it0.second->idom->bblk->getId());
-  }
-}
-
-void printDF(FILE* fp, FunctionOptMsg* funcOptMsg)
-{
-  fprintf(fp, "DF ---------------------\n");
-  for (std::pair<int, BasicBlockOptMsg*> it0 : funcOptMsg->id2bblk) {
-    fprintf(fp, "block id = %d, DF = ", it0.second->bblk->getId());
-    for (std::pair<int, BasicBlockOptMsg*> it1 : it0.second->DF) {
-      fprintf(fp, " %d ", it1.first);
-    }
-    fprintf(fp, "\n");
-  }
-}
-
-void printInsertPhi(FILE* fp, FunctionOptMsg* funcOptMsg)
-{
-  fprintf(fp, "insertPhi---------------------\n");
-  for (std::pair<int, BasicBlockOptMsg*> it0 : funcOptMsg->id2bblk) {
-    fprintf(fp, "block id = %d ,phi inst : ", it0.first);
-    for (PhiInst* inst : it0.second->phiInsts) {
-      fprintf(fp, " varAddr=%d, ", inst->varAddrRegId);
-    }
-    fprintf(fp, "\n");
-  }
 }

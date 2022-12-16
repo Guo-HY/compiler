@@ -67,8 +67,9 @@ class AsmImm : public AsmOperand {
 class AsmLabel : public AsmOperand {
   public:
   std::string label;
+  int bblkLabelId;
 
-  AsmLabel(std::string l) : AsmOperand(AsmOperandIdtfr::LABEL_AOI), label(l) {}
+  AsmLabel(std::string l) : AsmOperand(AsmOperandIdtfr::LABEL_AOI), label(l), bblkLabelId(-1) {}
 
   std::string toString() override;
 };
@@ -99,6 +100,7 @@ enum AsmInstIdtfr {
   LA_AII,     /* la rd, label */
   JAL_AII,    /* jal label */
   SYSCALL_AII,  /* syscall */
+  PHI_AII,    /* result = phi [val, label] ... */
 };
 
 /* reg read / write property */
@@ -122,6 +124,7 @@ class AsmInst {
   std::vector<std::pair<AsmOperand*, RWP>> ops; 
 
   AsmInst() : asmInstIdtfr(AsmInstIdtfr::NOP_AII) {}
+  AsmInst(AsmInstIdtfr idtfr) : asmInstIdtfr(idtfr) {}
   AsmInst(AsmInstIdtfr idtfr, std::initializer_list<std::pair<AsmOperand*, RWP>> ops) {
     this->asmInstIdtfr = idtfr;
     for (auto i : ops) {
@@ -129,7 +132,22 @@ class AsmInst {
     }
   }
 
+  bool isReadRWP(RWP rwp) {
+    return rwp == RWP::READ_RWP;
+  }
+  bool isWriteRWP(RWP rwp) {
+    return rwp == RWP::WRITE_RWP;
+  }
+
   std::string toString();
+};
+
+class AsmPhiInst : public AsmInst {
+  public:
+  std::vector<std::pair<AsmOperand*, AsmLabel*>> varDefs;
+  AsmReg* result;
+
+  AsmPhiInst() : AsmInst(AsmInstIdtfr::PHI_AII), result(NULL) {}
 };
 
 enum AsmGlobalDataIdtfr {
@@ -186,8 +204,10 @@ class AsmFunction {
   std::unordered_map<int, AsmImm*> funcArgsId2stackOffset;  /* 字节为单位 */
   std::pair<AsmImm*, AsmImm*> frameSize;  /* 字节为单位 */
   std::unordered_map<int, AsmImm*> virtRegId2stackOffset; 
+  int maxVirtRegId; /* 函数中虚拟寄存器的最大编号 */
 
-  AsmFunction(AsmLabel* name) : funcName(name), stackWordSize(0), funcCallArgsWordSize(0), raWordOffset(0) {}
+  AsmFunction(AsmLabel* name) : funcName(name), stackWordSize(0), funcCallArgsWordSize(0), 
+    raWordOffset(0), maxVirtRegId(0) {}
   void addBasicBlock(AsmBasicBlock* b) {
     this->basicBlocks.push_back(b);
   }
@@ -199,11 +219,17 @@ class AsmBasicBlock {
   public:
   AsmLabel* blockLabel;
   std::list<AsmInst*> insts;
+  // std::unordered_map<int, AsmBasicBlock*> succeed; /* 该基本块的后继基本块 */
 
   AsmBasicBlock(AsmLabel* label) : blockLabel(label) {}
   void addInst(AsmInst* inst) { 
     this->insts.push_back(inst);
   }
+
+  int getBblkId() {
+    return this->blockLabel->bblkLabelId;
+  }
+
   std::string toString();
 };
 

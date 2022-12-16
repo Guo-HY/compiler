@@ -24,7 +24,8 @@ static std::unordered_map<int, AsmImm*> virtRegId2stackOffset;
 static std::unordered_map<int, AsmImm*> funcArgsId2stackOffset;
 /* 当前函数栈大小，first是负数，second是正数，字节为单位 */
 static std::pair<AsmImm*, AsmImm*> frameSize;
-
+/* 保存当前函数的虚拟寄存器表,函数范围 */
+static std::unordered_map<int, AsmReg*> virtRegId2AsmReg;
 /* 当前处理的函数 */
 static AsmFunction* nowFunction;
 /* 当前待分配虚拟寄存器id */
@@ -65,7 +66,12 @@ int allocVirtAsmId()
 /* 分配虚拟寄存器 */
 AsmReg* allocVirtAsmReg()
 {
-  return new AsmReg(false, allocVirtAsmId());
+  AsmReg* newReg = new AsmReg(false, allocVirtAsmId());
+  if (virtRegId2AsmReg.count(newReg->virtNumber)) {
+    panic("error");
+  }
+  virtRegId2AsmReg[newReg->virtNumber] = newReg;
+  return newReg;
 }
 
 AsmLabel* allocAsmLabel(std::string name)
@@ -113,6 +119,19 @@ AsmImm* allocfuncArgOffset(Value* v)
 
 /* ---------------------------------------- *2asm ---------------------------------------- */
 
+/* 生成目标代码中的基本块label，整个module中都是唯一的,同时会将bblk的id填入 */
+AsmLabel* blockLabel2asm(Value* v)
+{
+  if (!isLabelValue(v)) {
+    panic("error");
+  }
+  LabelValue* l = (LabelValue*)v;
+  AsmLabel* asmLabel = allocAsmLabel(nowFunction->funcName->label + "." + 
+                      std::to_string(l->id));
+  asmLabel->bblkLabelId = l->getId();
+  return asmLabel;
+}
+
 /* 将VirRegValue 或者 NumberConstantValue转为AsmReg对象 */
 AsmReg* value2asmReg(Value* value)
 {
@@ -124,12 +143,17 @@ AsmReg* value2asmReg(Value* value)
     blockAddInst(AsmInstIdtfr::ADDIU_AII, {WRR(rt,rs,imm)});
     return rt;
   }
-  /* 如果是虚拟寄存器 */
+  /* 如果是虚拟寄存器,先查表，没有的话就新建 */
   if (value->valueIdtfr == ValueIdtfr::VIRTREG_VI) {
-    AsmReg* reg = new AsmReg(false, ((VirtRegValue*)value)->getId());
+    int virtRegId = ((VirtRegValue*)value)->getId();
+    if (virtRegId2AsmReg.count(virtRegId)) {
+      return virtRegId2AsmReg[virtRegId];
+    }
+    AsmReg* reg = new AsmReg(false, virtRegId);
+    virtRegId2AsmReg[virtRegId] = reg;
     return reg;
   }
-  panic("error");
+  panic("error : ValueIdtfr=%d", value->valueIdtfr);
   return NULL;
 }
 
@@ -193,15 +217,25 @@ int funcCallArgsWordSize(CallInst* callInst)
   return callInst->args.size();/* 因为函数参数肯定都是4字节大小 */
 }
 
+/* 将函数调用参数挪到函数声明的虚拟寄存器中 */
+void moveFuncParams2VirtReg(Function* func)
+{
+  for (FuncFParamValue* arg : func->funcFParamValues) {
+    VirtRegValue* varg = (VirtRegValue*)arg->value;
+    blockAddInst(AsmInstIdtfr::LW_AII, {WRR(value2asmReg(varg), 
+    funcArgsId2stackOffset[varg->getId()],name2PhysAsmReg["sp"])});
+  }
+}
+
 AsmFunction* function2asm(Function* function)
 {
   virtRegId2stackOffset.clear();
   funcArgsId2stackOffset.clear();
+  virtRegId2AsmReg.clear();
   nowVirtAsmId = function->maxLlvmIrId + 1;
   // Log("nowVirtAsmId = %d", nowVirtAsmId);
   nowFunction = new AsmFunction(allocAsmLabel(function->funcName));
-  nowblk = new AsmBasicBlock(allocAsmLabel(nowFunction->funcName->label + "." + 
-                      std::to_string(function->basicBlocks[0]->label->id)));
+  nowblk = new AsmBasicBlock(blockLabel2asm(function->basicBlocks[0]->label));
 
   /* 提前遍历一遍function并生成函数参数与局部变量相对于sp的偏移，以及栈大小,
     注意此时栈大小并没有考虑saved reg以及tmp变量 */
@@ -252,6 +286,8 @@ AsmFunction* function2asm(Function* function)
     funcArgsId2stackOffset[((VirtRegValue*)(function->funcFParamValues[i]->value))->getId()] = allocAsmImm(funcFParamOffsetBytes);
     funcFParamOffsetBytes += 4;
   }
+  /* 将函数参数挪到虚拟寄存器中 */
+  moveFuncParams2VirtReg(function);
 
   for (u_long i = 0; i < function->basicBlocks.size(); i++) {
     BasicBlock* basicBlock = function->basicBlocks[i];
@@ -278,6 +314,8 @@ AsmFunction* function2asm(Function* function)
         storeInst2asm((StoreInst*)instruction); break;
       case InstIdtfr::ZEXT_II:
         zextInst2asm((ZextInst*)instruction); break;
+      case InstIdtfr::PHI_II:
+        phiInst2asm((PhiInst*)instruction); break;
       default:
         panic("error");
         break;
@@ -285,13 +323,13 @@ AsmFunction* function2asm(Function* function)
     }
     nowFunction->addBasicBlock(nowblk);
     if (i < function->basicBlocks.size() - 1) {
-      nowblk = new AsmBasicBlock(allocAsmLabel(nowFunction->funcName->label + "." + 
-                    std::to_string(function->basicBlocks[i+1]->label->id)));
+      nowblk = new AsmBasicBlock(blockLabel2asm(function->basicBlocks[i+1]->label));
     }
   }
   nowFunction->frameSize = frameSize;
   nowFunction->funcArgsId2stackOffset = funcArgsId2stackOffset;
   nowFunction->virtRegId2stackOffset = virtRegId2stackOffset;
+  nowFunction->maxVirtRegId = nowVirtAsmId;
   return nowFunction;
 }
 
@@ -362,13 +400,14 @@ void storeInst2asm(StoreInst* storeInst)
   AsmReg* rt = value2asmReg(storeInst->value);
   AsmImm* offset0 = allocAsmImm(0);
   AsmImm* imm;
-  /* 如果是将函数参数挪到内存的store指令，（先load再store，假定所有函数参数均内存传递） */
-  /* lw rt, imm(base) */
-  if (isFuncFArg(storeInst->value)) {
-    blockAddInst(AsmInstIdtfr::LW_AII, 
-    {WRR(rt,allocfuncArgOffset(storeInst->value), 
-    name2PhysAsmReg["sp"])});
-  }
+  // /* 如果是将函数参数挪到内存的store指令，（先load再store，假定所有函数参数均内存传递） */
+  // /* TODO : 在blockAddInst中添加判断条件使用的虚拟寄存器是否是函数参数，若是则先load */
+  // /* lw rt, imm(base) */
+  // if (isFuncFArg(storeInst->value)) {
+  //   blockAddInst(AsmInstIdtfr::LW_AII, 
+  //   {WRR(rt,allocfuncArgOffset(storeInst->value), 
+  //   name2PhysAsmReg["sp"])});
+  // }
   if (isGlobalValue(storeInst->pointer)) {
     blockAddInst(AsmInstIdtfr::SW_AII, {RR(rt,allocAsmLabel(getGlobalValueName(storeInst->pointer)))});
   } else if (isVirtRegValue(storeInst->pointer) && 
@@ -436,14 +475,12 @@ AsmReg* icmpInst2asm( IcmpInst* icmpInst)
 
 void brInst2asm( BrInst* brInst)
 {
-  AsmLabel* trueLabel = allocAsmLabel(nowFunction->funcName->label + "." +
-             std::to_string(((LabelValue*)(brInst->iftrue))->id));
+  AsmLabel* trueLabel = blockLabel2asm(brInst->iftrue);
   if (brInst->isUnCond) {
     blockAddInst(AsmInstIdtfr::J_AII, {R(trueLabel)});
     return;
   }
-  AsmLabel* falseLabel = allocAsmLabel(nowFunction->funcName->label + "." +
-              std::to_string(((LabelValue*)(brInst->iffalse))->id));
+  AsmLabel* falseLabel = blockLabel2asm(brInst->iffalse);
   AsmReg* cond = value2asmReg(brInst->cond);
   AsmReg* zero = name2PhysAsmReg["zero"];
   blockAddInst(AsmInstIdtfr::BNE_AII, {RRR(cond, zero, trueLabel)});
@@ -514,7 +551,7 @@ void callInst2asm( CallInst* callInst)
     }
     return;
   }
-  /* 参数压栈 */
+  /* 参数压栈，自左向右，自底向上压栈 */
   int argStackOffsetBytes = 0;
   for (u_long i = 0; i < callInst->args.size(); i++) {
     /* sw rt, imm(base) */
@@ -550,4 +587,26 @@ void zextInst2asm(ZextInst* inst)
   AsmReg* result = value2asmReg(inst->result);
   AsmReg* value = value2asmReg(inst->value);
   blockAddInst(AsmInstIdtfr::ADDU_AII, {WRR(result, value, name2PhysAsmReg["zero"])});
+}
+
+/* phi函数中不能有常量，应当在对应基本块最后将常量放置在寄存器中
+  这里先将常量保存 。同时也在ops中添加信息。
+ */
+void phiInst2asm(PhiInst* inst)
+{
+  AsmPhiInst* phiInst = new AsmPhiInst();
+  AsmReg* result = value2asmReg(inst->result);
+  phiInst->result = result;
+  phiInst->ops.push_back({result, WRITE_RWP});
+  for (std::pair<Value*, LabelValue*> it : inst->vardefs) {
+    AsmOperand* v;
+    if (isVirtRegValue(it.first)) {
+      v = value2asmReg(it.first);
+    } else if (isNumberConstant(it.first)) {
+      v = new AsmImm(((NumberConstant*)it.first)->value);
+    }
+    phiInst->varDefs.push_back({v, blockLabel2asm(it.second)});
+    phiInst->ops.push_back({v, READ_RWP});
+  }
+  nowblk->addInst(phiInst);
 }

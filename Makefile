@@ -29,6 +29,7 @@ clean:
 	rm -f output
 	rm -f *.asm
 	rm -f *.txt
+	rm -f *.log
 
 run: gsc
 	./gsc

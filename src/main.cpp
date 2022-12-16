@@ -15,6 +15,7 @@
 #include "machine/asm_build.hpp"
 #include "machine/reg_allocator.hpp"
 #include "ir/opt/opt.hpp"
+#include "machine/opt/asm_opt.hpp"
 
 extern SymbolTable* currentSymbolTable;
 extern ErrorList errorList;
@@ -60,17 +61,28 @@ int main(int argc, char **argv)
   
   /* ir opt */
   optir(module);
-  freopen("llvm_ir.txt", "w", stdout);
+  freopen("output.ll", "w", stdout);
   s = module->toString();
-  printf("%s", s.c_str());
+  // printf("%s", s.c_str());
 
   /* gen asm */
-  // freopen("mips.txt", "w", stdout);
-  // AsmModule* asmModule = module2asm(module);
-  // plainRegAllocator(asmModule);
-
-  // s = asmModule->toString();
+  freopen("base.asm", "w", stdout);
+  AsmModule* asmModule = module2asm(module);
+  Log("after gen asm");
+  s = asmModule->toString();
   // printf("%s", s.c_str());
+
+  freopen("graph.asm", "w", stdout);
+  graphRegAllocator(asmModule);
+  Log("after graphRegAllocator");
+  s = asmModule->toString();
+  // printf("%s", s.c_str());
+
+  freopen("mips.txt", "w", stdout);
+  plainRegAllocator(asmModule);
+  Log("after plainRegAllocator");
+  s = asmModule->toString();
+  printf("%s", s.c_str());
 
   return 0;
 }

@@ -4,15 +4,15 @@ extern std::unordered_map<std::string, int> name2regPhysNum;
 extern std::unordered_map<std::string, AsmReg*> name2PhysAsmReg;
 
 
-/* 分配寄存器仅使用t0 - t2 虚拟寄存器全部在内存中分配空间，
+/* 分配寄存器仅使用k0,k1,v1 虚拟寄存器全部在内存中分配空间，
   运算完成后直接存入内存 */
 int nowSpOffsetWord;
 std::list<AsmReg*> freeRegPool; 
 void plainRegAllocator(AsmModule* module)
 {
-  freeRegPool.push_back(name2PhysAsmReg["t0"]);
-  freeRegPool.push_back(name2PhysAsmReg["t1"]);
-  freeRegPool.push_back(name2PhysAsmReg["t2"]);
+  freeRegPool.push_back(name2PhysAsmReg["k0"]);
+  freeRegPool.push_back(name2PhysAsmReg["k1"]);
+  freeRegPool.push_back(name2PhysAsmReg["v1"]);
 
   for (u_long i = 0; i < module->functions.size(); i++) {
     AsmFunction* func = module->functions[i];
@@ -22,11 +22,17 @@ void plainRegAllocator(AsmModule* module)
       std::list<AsmInst*>::iterator it = blk->insts.begin();
       while (it != blk->insts.end()) {
         AsmInst* inst = *it;
+        if (inst->asmInstIdtfr == AsmInstIdtfr::PHI_AII) {
+          /* TODO */
+          it++;
+          continue;
+        }
         allocVirtRegMem(func, inst);
         it = instRegVirt2phys(func, blk, inst, it);
       }
     }
     int addWordSize = nowSpOffsetWord - func->stackWordSize;
+    func->stackWordSize = nowSpOffsetWord;
     func->frameSize.first->immediate = nowSpOffsetWord * -4;
     func->frameSize.second->immediate = nowSpOffsetWord * 4;
     std::unordered_map<int, AsmImm*>::iterator iter;
@@ -59,6 +65,9 @@ void allocVirtRegMem(AsmFunction* func, AsmInst* inst)
 std::list<AsmInst*>::iterator
 instRegVirt2phys(AsmFunction* func, AsmBasicBlock* blk, AsmInst* inst, std::list<AsmInst*>::iterator it)
 {
+  if (inst->asmInstIdtfr == AsmInstIdtfr::PHI_AII) {
+    panic("error");
+  }
   AsmInst* newInst;
   std::list<AsmReg*> usdRegPool; 
   AsmReg* writePhyReg = NULL;
