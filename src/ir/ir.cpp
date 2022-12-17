@@ -478,3 +478,155 @@ void BrInst::updateUseValue(Value* oldv, Value* newv)
 void PhiInst::updateUseValue(Value* oldv, Value* newv)
 {
 }
+
+bool BinaryInst::isUseThisReg(int virtRegId)
+{
+  if (op1->valueIdtfr == ValueIdtfr::VIRTREG_VI) {
+    int op1Id = ((VirtRegValue*)op1)->getId();
+    if (op1Id == virtRegId) {
+      return true;
+    }
+  }
+
+  if (op2->valueIdtfr == ValueIdtfr::VIRTREG_VI) {
+    int op2Id = ((VirtRegValue*)op2)->getId();
+    if (op2Id == virtRegId) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool AllocaInst::isUseThisReg(int virtRegId)
+{
+  return false;
+}
+
+bool LoadInst::isUseThisReg(int virtRegId)
+{
+  if (pointer->valueIdtfr == ValueIdtfr::VIRTREG_VI) {
+    int id = ((VirtRegValue*)pointer)->getId();
+    if (id == virtRegId) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool StoreInst::isUseThisReg(int virtRegId)
+{
+  int id;
+  if (pointer->valueIdtfr == ValueIdtfr::VIRTREG_VI) {
+    id = ((VirtRegValue*)pointer)->getId();
+    if (id == virtRegId) {
+      return true;
+    }
+  }
+  
+  if (value->valueIdtfr == ValueIdtfr::VIRTREG_VI) {
+    id = ((VirtRegValue*)value)->getId();
+    if (id == virtRegId) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool GEPInst::isUseThisReg(int virtRegId)
+{
+  int id;
+  if (ptrval->valueIdtfr == ValueIdtfr::VIRTREG_VI) {
+    id = ((VirtRegValue*)ptrval)->getId();
+    if (id == virtRegId) {
+      return true;
+    }
+  }
+  
+  for (Value* v : indexs) {
+    if (v->valueIdtfr == ValueIdtfr::VIRTREG_VI) {
+      id = ((VirtRegValue*)v)->getId();
+      if (id == virtRegId) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool ZextInst::isUseThisReg(int virtRegId)
+{
+  if (value->valueIdtfr == ValueIdtfr::VIRTREG_VI) {
+    int id = ((VirtRegValue*)value)->getId();
+    return id == virtRegId;
+  }
+  return false;
+}
+
+bool IcmpInst::isUseThisReg(int virtRegId)
+{
+  if (op1->valueIdtfr == ValueIdtfr::VIRTREG_VI) {
+    int op1Id = ((VirtRegValue*)op1)->getId();
+    if (op1Id == virtRegId) {
+      return true;
+    }
+  }
+
+  if (op2->valueIdtfr == ValueIdtfr::VIRTREG_VI) {
+    int op2Id = ((VirtRegValue*)op2)->getId();
+    if (op2Id == virtRegId) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool CallInst::isUseThisReg(int virtRegId)
+{
+  int id;
+  for (Value* v : args) {
+    if (v->valueIdtfr == ValueIdtfr::VIRTREG_VI) {
+      id = ((VirtRegValue*)v)->getId();
+      if (id == virtRegId) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool RetInst::isUseThisReg(int virtRegId)
+{
+  if (isVoid) {
+    return false;
+  }
+  if (value->valueIdtfr == ValueIdtfr::VIRTREG_VI) {
+    int id = ((VirtRegValue*)value)->getId();
+    return id == virtRegId;
+  }
+  return false;
+}
+
+bool BrInst::isUseThisReg(int virtRegId)
+{
+  if (isUnCond) {
+    return false;
+  }
+  if (cond->valueIdtfr == ValueIdtfr::VIRTREG_VI) {
+    int id = ((VirtRegValue*)cond)->getId();
+    return id == virtRegId;
+  }
+  return false;
+}
+
+bool PhiInst::isUseThisReg(int virtRegId)
+{
+  for (std::pair<Value*, LabelValue*> def : vardefs) {
+    if (def.first->valueIdtfr == ValueIdtfr::VIRTREG_VI) {
+      int id = ((VirtRegValue*)def.first)->getId();
+      if (id == virtRegId) {
+        return true;
+      }
+    }
+  }
+  return false;
+}

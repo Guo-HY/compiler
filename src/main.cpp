@@ -63,20 +63,20 @@ int main(int argc, char **argv)
   optir(module);
   freopen("output.ll", "w", stdout);
   s = module->toString();
-  // printf("%s", s.c_str());
+  printf("%s", s.c_str());
 
   /* gen asm */
   freopen("base.asm", "w", stdout);
   AsmModule* asmModule = module2asm(module);
   Log("after gen asm");
   s = asmModule->toString();
-  // printf("%s", s.c_str());
+  printf("%s", s.c_str());
 
   freopen("graph.asm", "w", stdout);
   graphRegAllocator(asmModule);
   Log("after graphRegAllocator");
   s = asmModule->toString();
-  // printf("%s", s.c_str());
+  printf("%s", s.c_str());
 
   freopen("mips.txt", "w", stdout);
   plainRegAllocator(asmModule);

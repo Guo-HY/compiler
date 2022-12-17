@@ -189,28 +189,29 @@ static void varRenaming(FunctionOptMsg* funcMsg)
   std::vector<BasicBlockOptMsg*> bblkMsgs;
   preorderTraversalDT(&bblkMsgs, funcMsg->id2bblk[funcMsg->entryBblkId]);
   bool flag = false;
+  std::unordered_map<int, int> freshLoadRegId2AddrId;
   for (BasicBlockOptMsg* bblkMsg : bblkMsgs) {
+    freshLoadRegId2AddrId.clear();
     std::list<Instruction*>* insts = &(bblkMsg->bblk->instructions);
     for (std::list<Instruction*>::iterator it1 = insts->begin(); it1 != insts->end(); ) {
       flag = false;
       /* 局部int的alloc直接删除 */
       if (isAllocaInst(*it1) && 
         ((AllocaInst*)(*it1))->allocType->typeIdtfr == TypeIdtfr::INTEGER_TI ) {
-        // Log("before delete alloca : alloc addr = %d", ((VirtRegValue*)(((AllocaInst*)(*it1))->result))->id);
         it1 = insts->erase(it1);
         flag = true;
-        // Log("after delete alloca");
         /* 如果是局部int变量的load，更新所有指令中对该指令结果的使用并删除load */
       } else if (isLoadInst(*it1) && isVirtRegValue(((LoadInst*)*it1)->pointer)) {
         VirtRegValue* addrReg = (VirtRegValue*)(((LoadInst*)*it1)->pointer);
         if (funcMsg->varAddrRegId2defBblk.count(addrReg->getId()) != 0) {
-          // Log("before delete load");
           /* load出来的一定是一个寄存器,但是变量的到达定义不一定是寄存器 */
           Value* reachdefValue = bblkMsg->getReachDefValue(addrReg->getId());
           /* 如果reachdefValue是寄存器，那么直接改编号就可以了 */
           if (isVirtRegValue(reachdefValue)) {
             /* 假设一个函数中编号相同的虚拟寄存器，对象也相同（同一块内存） */
             ((VirtRegValue*)(((LoadInst*)*it1)->result))->id = ((VirtRegValue*)reachdefValue)->getId(); /* 直接改id */
+            /* 标记为freshLoad */
+            freshLoadRegId2AddrId[((VirtRegValue*)reachdefValue)->getId()] = addrReg->getId();
           } else if (isNumberConstant(reachdefValue)){
             /* 否则reachdefValue一定是NumberConstant, 此时需要替换所有使用指令中的引用 */
             updateInstUseValue(it1, insts, ((LoadInst*)*it1)->result, reachdefValue);
@@ -219,26 +220,48 @@ static void varRenaming(FunctionOptMsg* funcMsg)
           }
           it1 = insts->erase(it1);
           flag = true;
-          // Log("after delete load");
         }
       /* 如果是局部int变量的store，更新变量到达定义，并删除store */
       } else if (isStoreInst(*it1) && isVirtRegValue(((StoreInst*)*it1)->pointer)) {
         VirtRegValue* addrReg = (VirtRegValue*)(((StoreInst*)*it1)->pointer);
+        /* 判断是否为局部int变量 */
         if (funcMsg->varAddrRegId2defBblk.count(addrReg->getId()) != 0) {
-          // Log(" before delete store");
           Value* storeValue = ((StoreInst*)*it1)->value;
-          bblkMsg->reachdef[addrReg->getId()] = storeValue;
+          int storeValueId;
+          if (isVirtRegValue(storeValue)) {
+            storeValueId = ((VirtRegValue*)storeValue)->getId();
+          }
+          /* 如果storeValue是freshload的，那么需要插入显式复制操作 */
+          if (isVirtRegValue(storeValue) && freshLoadRegId2AddrId.count(storeValueId) != 0 && 
+              freshLoadRegId2AddrId[storeValueId] != -1 && freshLoadRegId2AddrId[storeValueId] != addrReg->id) {
+            BinaryInst* moveInst = new BinaryInst(BinaryInstIdtfr::OR_BII);
+            moveInst->op1 = storeValue;
+            moveInst->op2 = storeValue;
+            moveInst->result = new VirtRegValue(funcMsg->func->maxLlvmIrId, new IntegerType(32));
+            (funcMsg->func->maxLlvmIrId)++;
+            it1 = insts->insert(it1, moveInst);
+            it1++;
+            bblkMsg->reachdef[addrReg->getId()] = moveInst->result;
+          } else {
+            bblkMsg->reachdef[addrReg->getId()] = storeValue;
+          }
+          if (isVirtRegValue(storeValue)) {
+            freshLoadRegId2AddrId[storeValueId] = -1;
+          }
           it1 = insts->erase(it1);
           flag = true;
-          // Log("after delete store");
         }
       }
 
       if (flag == false) {
+        for (std::pair<int, int> it : freshLoadRegId2AddrId) {
+          if ((*it1)->isUseThisReg(it.first)) {
+            freshLoadRegId2AddrId[it.first] = -1;
+          }
+        }
         it1++;
       }
     }
-    // Log("before update phi");
     /* 维护后继基本块的phi指令 */
     int nowBblkId = bblkMsg->bblk->getId();
     std::vector<int>* succeeds = funcMsg->cfgGraph[nowBblkId];
@@ -251,7 +274,6 @@ static void varRenaming(FunctionOptMsg* funcMsg)
         }
       }
     }
-    // Log("after update phi");
   }
 }
 
@@ -343,34 +365,34 @@ static void printInsertPhi(FILE* fp, FunctionOptMsg* funcOptMsg)
 /* 以函数为单位进行mem2reg */
 static void funcMem2reg(Function* func)
 {
-  // FILE* fp = fopen("mem2reg.log", "w");
-  // fprintf(fp, "func name = %s\n", func->funcName.c_str());
+  FILE* fp = fopen("mem2reg.log", "a");
+  fprintf(fp, "func name = %s\n", func->funcName.c_str());
 
   FunctionOptMsg* funcOptMsg = new FunctionOptMsg(func);
   /* 求CFG */
   calFunctionCfg(funcOptMsg);
-  // printCFGLog(fp, funcOptMsg);
+  printCFGLog(fp, funcOptMsg);
   // return;
   /* 求每个基本块的严格支配 */
   calStrictlyDominated(funcOptMsg);
-  // printStrictlyDominated(fp, funcOptMsg);
+  printStrictlyDominated(fp, funcOptMsg);
   // return;
   /* 求每个基本块的直接支配者,入口块没有直接支配者 */
   calIdom(funcOptMsg);
-  // printIdom(fp, funcOptMsg);
+  printIdom(fp, funcOptMsg);
   // return;
   /* 求每个节点的支配边界 */
   calDF(funcOptMsg);
-  // printDF(fp, funcOptMsg);
+  printDF(fp, funcOptMsg);
   // return;
   /* 计算变量的定义使用点 */
   calVarDefUse(funcOptMsg);
-  // printVarDefUse(fp, funcOptMsg);
+  printVarDefUse(fp, funcOptMsg);
   // return;
 
   /* 插入phi节点 */
   insertPhi(funcOptMsg);
-  // printInsertPhi(fp, funcOptMsg);
+  printInsertPhi(fp, funcOptMsg);
   // return;
   /* 变量重命名 */
   varRenaming(funcOptMsg);

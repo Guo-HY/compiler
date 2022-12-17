@@ -296,6 +296,7 @@ class Instruction : public Value {
   Instruction(InstIdtfr i) : Value(INSTRUCTION_VI, new OtherType()), instType(i) {}
   virtual std::string toString() = 0;
   virtual void updateUseValue(Value* oldv, Value* newv) = 0;
+  virtual bool isUseThisReg(int virtRegId) = 0;
 };
 
 enum BinaryInstIdtfr {
@@ -315,6 +316,7 @@ class BinaryInst : public Instruction {
   BinaryInst(BinaryInstIdtfr b) : Instruction(BINARY_II), binaryInstType(b), op1(NULL), op2(NULL), result(NULL) {}
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
+  bool isUseThisReg(int virtRegId) override;
 };
 
 class AllocaInst : public Instruction {
@@ -325,6 +327,7 @@ class AllocaInst : public Instruction {
   AllocaInst(Type* t, VirtRegValue* r) : Instruction(ALLOCA_II), allocType(t), result(r) {}
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
+  bool isUseThisReg(int virtRegId) override;
 };
 
 class LoadInst : public Instruction {
@@ -334,6 +337,7 @@ class LoadInst : public Instruction {
   LoadInst() : Instruction(LOAD_II), pointer(NULL), result(NULL) {}
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
+  bool isUseThisReg(int virtRegId) override;
 };
 
 class StoreInst : public Instruction {
@@ -344,6 +348,7 @@ class StoreInst : public Instruction {
   StoreInst(Value* v, Value* p) : Instruction(STORE_II), value(v), pointer(p) {}
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
+  bool isUseThisReg(int virtRegId) override;
 };
 
 class GEPInst : public Instruction {
@@ -357,6 +362,7 @@ class GEPInst : public Instruction {
   GEPInst() : Instruction(GEP_II), result(NULL), elemType(NULL), elemTypePointer(NULL), ptrval(NULL) {}
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
+  bool isUseThisReg(int virtRegId) override;
 };
 
 class ZextInst : public Instruction {
@@ -365,6 +371,7 @@ class ZextInst : public Instruction {
   ZextInst() : Instruction(ZEXT_II), result(NULL), value(NULL) {}
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
+  bool isUseThisReg(int virtRegId) override;
 };
 
 enum ICMPCASE {
@@ -388,6 +395,7 @@ class IcmpInst : public Instruction {
   IcmpInst() : Instruction(ICMP_II), cond(NONE_ICMPCASE), op1(NULL), op2(NULL), result(NULL) {}
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
+  bool isUseThisReg(int virtRegId) override;
 };
 
 class CallInst : public Instruction {
@@ -399,6 +407,7 @@ class CallInst : public Instruction {
   CallInst() : Instruction(CALL_II), result(NULL), returnType(NULL) {}
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
+  bool isUseThisReg(int virtRegId) override;
 };
 
 class RetInst : public Instruction {
@@ -409,6 +418,7 @@ class RetInst : public Instruction {
   RetInst() : Instruction(RET_II), isVoid(false), returnType(NULL), value(NULL) {}
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
+  bool isUseThisReg(int virtRegId) override;
 };
 
 class BrInst : public Instruction {
@@ -418,6 +428,7 @@ class BrInst : public Instruction {
   BrInst() : Instruction(BR_II), isUnCond(false), iftrue(NULL), iffalse(NULL), dest(NULL), cond(NULL) {}
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
+  bool isUseThisReg(int virtRegId) override;
 };
 
 class PhiInst : public Instruction {
@@ -429,6 +440,7 @@ class PhiInst : public Instruction {
   PhiInst() : Instruction(PHI_II), varAddrRegId(0), result(NULL) {}
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
+  bool isUseThisReg(int virtRegId) override;
 };
 
 
