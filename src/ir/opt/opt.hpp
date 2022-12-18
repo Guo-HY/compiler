@@ -19,6 +19,7 @@ void rmblk(Module* module);
 void mem2reg(Module* module);
 void deadCodeElim(Module* module);
 void globalConstantPropagation(Module* module);
+void dullMulDiv(Module* module);
 
 inline void optir(Module* module)
 {
@@ -29,9 +30,9 @@ inline void optir(Module* module)
   fclose(fp);
 
   rmblk(module);
-  Log("after rmblk");
+  Log("after rmblk1");
   s = module->toString();
-  fp = fopen("rmblk.ll", "w");
+  fp = fopen("rmblk1.ll", "w");
   fprintf(fp, "%s", s.c_str());
   fclose(fp);
 
@@ -49,12 +50,26 @@ inline void optir(Module* module)
   fprintf(fp, "%s", s.c_str());
   fclose(fp);
 
+  dullMulDiv(module);
+  Log("after dullMulDiv");
+  s = module->toString();
+  fp = fopen("dull.ll", "w");
+  fprintf(fp, "%s", s.c_str());
+  fclose(fp);
+
   deadCodeElim(module);
   Log("after deadCodeElim");
   s = module->toString();
   fp = fopen("dce.ll", "w");
   fprintf(fp, "%s", s.c_str());
   fclose(fp);
+
+  // rmblk(module);
+  // Log("after rmblk2");
+  // s = module->toString();
+  // fp = fopen("rmblk2.ll", "w");
+  // fprintf(fp, "%s", s.c_str());
+  // fclose(fp);
 }
 
 class FunctionOptMsg {

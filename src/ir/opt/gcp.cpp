@@ -56,6 +56,40 @@ static Value* tryConvertInst2Const(Instruction* inst)
         break;
       }
       return new NumberConstant(value, bitWidth);
+    } 
+    /* 这里进行了一部分指令变换，相当于做了一些窥孔优化 */
+    else if (isNumberConstant(bInst->op1)) {
+      int op1 = ((NumberConstant*)(bInst->op1))->value;
+      if (op1 == 0 && (bInst->binaryInstType == BinaryInstIdtfr::MUL_BII || 
+          bInst->binaryInstType == BinaryInstIdtfr::SDIV_BII || 
+          bInst->binaryInstType == BinaryInstIdtfr::AND_BII ||
+          bInst->binaryInstType == BinaryInstIdtfr::MOD_BII )) {
+        return bInst->op1;
+      }
+      if ((op1 == 0 && bInst->binaryInstType == BinaryInstIdtfr::ADD_BII) ||
+          (op1 == 1 && bInst->binaryInstType == BinaryInstIdtfr::MUL_BII) ||
+          (op1 == 0 && bInst->binaryInstType == BinaryInstIdtfr::OR_BII)) {
+        return bInst->op2;
+      }
+    } 
+    else if (isNumberConstant(bInst->op2)) {
+      int op2 = ((NumberConstant*)(bInst->op2))->value;
+      if (op2 == 0 && (bInst->binaryInstType == BinaryInstIdtfr::ADD_BII ||
+          bInst->binaryInstType == BinaryInstIdtfr::SUB_BII  ||
+          bInst->binaryInstType == BinaryInstIdtfr::OR_BII)) {
+        return bInst->op1;
+      }
+      if (op2 == 0 && (bInst->binaryInstType == BinaryInstIdtfr::MUL_BII ||
+          bInst->binaryInstType == BinaryInstIdtfr::AND_BII)) {
+        return bInst->op2;
+      }
+      if (op2 == 1 && (bInst->binaryInstType == BinaryInstIdtfr::MUL_BII ||
+            bInst->binaryInstType == BinaryInstIdtfr::SDIV_BII)) {
+        return bInst->op1;
+      }
+      if (op2 == 1 && bInst->binaryInstType == BinaryInstIdtfr::MOD_BII) {
+        return new NumberConstant(0, 32);
+      }
     }
   } else if (isZextInst(inst)) {
     ZextInst* zInst = (ZextInst*)inst;
@@ -139,11 +173,38 @@ static int funcGCP(Function* func)
   return rmInstNum;
 }
 
+/* 发现条件为常值的br指令，并重写为无条件跳转指令 */
+static int convertBr2Uncond(Function* func)
+{
+  int convertNum = 0;
+  for (BasicBlock* bblk : func->basicBlocks) {
+    Instruction* termInst = bblk->instructions.back();
+    if (isBrInst(termInst)) {
+      BrInst* brInst = (BrInst*)termInst;
+      if (!brInst->isUnCond && isNumberConstant(brInst->cond)) {
+        int cond = ((NumberConstant*)brInst->cond)->value;
+        brInst->isUnCond = true;
+        if (cond != 0) {
+          brInst->dest = brInst->iftrue;
+        } else {
+          brInst->dest = brInst->iffalse;
+          brInst->iftrue = brInst->iffalse; /* 默认iftrue也是dest */
+        }
+        convertNum++;
+      }
+    }
+  }
+  return convertNum;
+}
+
 void globalConstantPropagation(Module* module)
 {
   int totalRmInst = 0;
+  int totalConvertBrNum = 0;
   for (Function* func : module->funcDef) {
     totalRmInst += funcGCP(func);
+    totalConvertBrNum += convertBr2Uncond(func);
   }
-  Log("globalConstantPropagation : totalRmInstNum=%d", totalRmInst);
+  Log("globalConstantPropagation : totalRmInstNum=%d, \
+    totalConvertBrNum=%d", totalRmInst, totalConvertBrNum);
 }

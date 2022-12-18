@@ -10,7 +10,7 @@ char phyRegNum2name[][10] = {
 char instIdtfr2name[][10] = {
   "none ", "add ", "addu ", "addiu ", "sub ", "subu ", "mult ", "div ", "xor ", 
   "and ", "andi", "or ", "ori", "mfhi ", "mflo ", "lw ", "sw ", "nop ", "j ", "bne ", "jr ", 
-  "sltiu ", "sltu ", "slt ", "la ", "jal ", "syscall ", "",
+  "sltiu ", "sltu ", "slt ", "la ", "jal ", "syscall ", "", "sll", "sra", "srl",
 };
 
 std::string AsmReg::toString()

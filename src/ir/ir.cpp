@@ -77,6 +77,9 @@ char binaryInstOp[][10] = {
   "and",
   "or",
   "srem",
+  "shl",
+  "lshr",
+  "ashr",
 };
 
 std::string BinaryInst::toString()

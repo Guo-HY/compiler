@@ -103,6 +103,9 @@ enum AsmInstIdtfr {
   JAL_AII,    /* jal label */
   SYSCALL_AII,  /* syscall */
   PHI_AII,    /* result = phi [val, label] ... */
+  SLL_AII,    /* sll rd, rt, imm          GPR[rd] <- GPR[rt] << imm */
+  SRA_AII,    /* 算术右移 sra rd, rt, imm   GPR[rd] <- GPR[rt] >> imm */
+  SRL_AII,    /* 逻辑右移 srl rd, rt, imm   GPR[rd] <- GPR[rt] >> imm*/
 };
 
 /* reg read / write property */

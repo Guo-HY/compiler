@@ -428,6 +428,19 @@ void binaryInst2asm( BinaryInst* binaryInst)
       op2 = new AsmImm(((NumberConstant*)binaryInst->op1)->value | ((NumberConstant*)binaryInst->op2)->value);
       idtfr = AsmInstIdtfr::ADDIU_AII;
     }
+      goto lb1;
+    case BinaryInstIdtfr::SHL_BII:
+      idtfr = AsmInstIdtfr::SLL_AII;
+      goto lb3;
+    case BinaryInstIdtfr::ASHR_BII:
+      idtfr = AsmInstIdtfr::SRA_AII;
+      goto lb3;
+    case BinaryInstIdtfr::LSHR_BII:
+      idtfr = AsmInstIdtfr::SRL_AII;
+    lb3:
+      result = value2asmReg(binaryInst->result);
+      op1 = value2asmReg(binaryInst->op1);
+      op2 = value2asmImm(binaryInst->op2);
     goto lb1;
       lb1: blockAddInst(idtfr, {WRR(result, op1, op2)});
     break;

@@ -312,6 +312,9 @@ enum BinaryInstIdtfr {
   AND_BII,
   OR_BII,
   MOD_BII,
+  SHL_BII,
+  LSHR_BII,
+  ASHR_BII,
 };
 
 class BinaryInst : public Instruction {

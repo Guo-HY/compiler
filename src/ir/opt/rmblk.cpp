@@ -45,9 +45,9 @@ void insertLabelId2Values(LabelValue* l)
     labelId2Values[l->id] = new std::set<LabelValue*>;
   }
   labelId2Values[l->id]->insert(l);
-  if (labelId2Values[l->id]->size() > 1) {
-    panic("error");
-  }
+  // if (labelId2Values[l->id]->size() > 1) {
+  //   panic("error");
+  // }
 }
 
 /* 若是空块则返回跳转到的LabelValue，否则返回NULL */
@@ -117,6 +117,7 @@ void funcRmEmptyBlock(Function* func)
     }
   }
   /* 没有保持对象唯一性 */
+
 }
 
 
