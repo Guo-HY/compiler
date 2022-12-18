@@ -2,6 +2,7 @@
 
 /* 虚拟寄存器id到所有使用这个寄存器的指令的映射 */
 static std::unordered_map<int, std::set<Instruction*>*> regId2useInsts;
+static std::unordered_map<int, Instruction*> regId2DefInst;
 
 static void insertRegId2useInsts(int regId, Instruction* inst)
 {
@@ -11,10 +12,19 @@ static void insertRegId2useInsts(int regId, Instruction* inst)
   regId2useInsts[regId]->insert(inst);
 }
 
+static void insertRegId2DefInst(int regId, Instruction* defInst) 
+{
+  if (regId2DefInst.count(regId) != 0) {
+    panic("error");
+  } 
+  regId2DefInst[regId] = defInst;
+}
+
 /* 计算regId2useInsts */
 static void gcpInit(Function* func)
 {
   regId2useInsts.clear();
+  regId2DefInst.clear();
   std::set<int> useRegIds;
   for (BasicBlock* bblk : func->basicBlocks) {
     for (Instruction* inst : bblk->instructions) {
@@ -22,8 +32,55 @@ static void gcpInit(Function* func)
       for (int id : useRegIds) {
         insertRegId2useInsts(id, inst);
       }
+      int defRegId = inst->getDefRegId();
+      if (defRegId == -1) {
+        continue;
+      }
+      insertRegId2DefInst(defRegId, inst);
     }
   }
+}
+
+/* 尝试获取全局常量值，不成功返回NULL */
+extern Type* ptrType2Type(Type* t);
+static Value* tryConvertGlobalConst(LoadInst* inst)
+{
+  Value* addr = inst->pointer;
+  /* 首先判断是否是全局int常量 */
+  if (isGlobalValue(addr)) {
+    GlobalValue* gint = ((GlobalValue*)addr);
+    if (gint->isConst && !gint->isconstString) {
+      if (!gint->globalInitValue->isValue) {
+        panic("error");
+      }
+      return gint->globalInitValue->value;
+    }
+    return NULL;
+  }
+  /* 否则就是数组，需要先找到数组的gep指令 */
+  Instruction* gInst = regId2DefInst[((VirtRegValue*)addr)->getId()];
+  if (!isGEPInst(gInst)) {
+    // panic("error");
+    return NULL;
+  }
+  GEPInst* gepInst = (GEPInst*)gInst;
+  addr = gepInst->ptrval;
+  if (!isGlobalValue(addr)) {
+    return NULL;
+  }
+  GlobalValue* garray = (GlobalValue*)addr;
+  if (!(garray->isConst && !garray->isconstString)) {
+    return NULL;
+  }
+  GlobalInitValue* initValue = garray->globalInitValue;
+  for (u_long i = 1; i < gepInst->indexs.size(); i++) {
+    Value* v = gepInst->indexs[i];
+    if (!isNumberConstant(v)) {
+      return NULL;
+    }
+    initValue = initValue->globalInitValues[((NumberConstant*)v)->value];
+  }
+  return initValue->value;
 }
 
 /* 检查指令是否可以计算为常数，若可以则返回NumberConstant，否则返回NULL */
@@ -131,6 +188,8 @@ static Value* tryConvertInst2Const(Instruction* inst)
       }
       return new NumberConstant(value, bitWidth);
     }
+  } else if (isLoadInst(inst)) {
+    return tryConvertGlobalConst((LoadInst*)inst);
   }
   return NULL;
 }
