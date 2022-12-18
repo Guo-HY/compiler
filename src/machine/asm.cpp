@@ -9,7 +9,7 @@ char phyRegNum2name[][10] = {
 
 char instIdtfr2name[][10] = {
   "none ", "add ", "addu ", "addiu ", "sub ", "subu ", "mult ", "div ", "xor ", 
-  "and ", "or ", "mfhi ", "mflo ", "lw ", "sw ", "nop ", "j ", "bne ", "jr ", 
+  "and ", "andi", "or ", "ori", "mfhi ", "mflo ", "lw ", "sw ", "nop ", "j ", "bne ", "jr ", 
   "sltiu ", "sltu ", "slt ", "la ", "jal ", "syscall ", "",
 };
 
@@ -18,7 +18,7 @@ std::string AsmReg::toString()
   std::string s;
   s += "$";
   if (this->isPhysReg == false) {
-    Log("may has error");
+    // Log("may has error");
     s += "virt";
     s += std::to_string(this->virtNumber);
     return s;

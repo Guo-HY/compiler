@@ -31,8 +31,9 @@ class AsmFuncOptMsg {
   std::unordered_map<int, std::set<int>*> conflictGraph;
   /* LR到分配的物理寄存器名，"not"代表不分配物理寄存器 */
   std::unordered_map<int, std::string> LR2physRegName;
+  int spillVirtRegNum;
 
-  AsmFuncOptMsg(AsmFunction* f) : asmFunction(f) {}
+  AsmFuncOptMsg(AsmFunction* f) : asmFunction(f), spillVirtRegNum(0) {}
 
   void addCfgEdge(int from, std::vector<int> to) {
     if (cfgGraph.count(from) == 0) {

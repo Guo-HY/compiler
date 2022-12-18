@@ -17,6 +17,7 @@ class BasicBlockOptMsg;
 
 void rmblk(Module* module);
 void mem2reg(Module* module);
+void deadCodeElim(Module* module);
 
 inline void optir(Module* module)
 {
@@ -37,6 +38,13 @@ inline void optir(Module* module)
   Log("after mem2reg");
   s = module->toString();
   fp = fopen("mem2reg.ll", "w");
+  fprintf(fp, "%s", s.c_str());
+  fclose(fp);
+
+  deadCodeElim(module);
+  Log("after deadCodeElim");
+  s = module->toString();
+  fp = fopen("dce.ll", "w");
   fprintf(fp, "%s", s.c_str());
   fclose(fp);
 }

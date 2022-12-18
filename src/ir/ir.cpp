@@ -1,5 +1,6 @@
 #include "ir.hpp"
 #include "ir_build.hpp"
+#include "ir_utils.hpp"
 // std::string LabelValue::toString(bool withSign)
 // {
 //   std::string s;
@@ -629,4 +630,180 @@ bool PhiInst::isUseThisReg(int virtRegId)
     }
   }
   return false;
+}
+
+int BinaryInst::getDefRegId()
+{
+  return ((VirtRegValue*)result)->getId();
+}
+
+std::set<int> BinaryInst::getUseRegIds()
+{
+  std::set<int> r;
+  if (isVirtRegValue(op1)) {
+    r.insert(((VirtRegValue*)op1)->getId());
+  }
+  if (isVirtRegValue(op2)) {
+    r.insert(((VirtRegValue*)op2)->getId());
+  }
+  return r;
+}
+
+int AllocaInst::getDefRegId()
+{
+  return ((VirtRegValue*)result)->getId();
+}
+
+std::set<int> AllocaInst::getUseRegIds()
+{
+  std::set<int> r;
+  return r;
+}
+
+int LoadInst::getDefRegId()
+{
+  return ((VirtRegValue*)result)->getId();
+}
+
+std::set<int> LoadInst::getUseRegIds()
+{
+  std::set<int> r;
+  if (isVirtRegValue(pointer)) {
+    r.insert(((VirtRegValue*)pointer)->getId());
+  }
+  return r;
+}
+
+int StoreInst::getDefRegId()
+{
+  return -1;
+}
+
+std::set<int> StoreInst::getUseRegIds()
+{
+  std::set<int> r;
+  if (isVirtRegValue(pointer)) {
+    r.insert(((VirtRegValue*)pointer)->getId());
+  }
+  if (isVirtRegValue(value)) {
+    r.insert(((VirtRegValue*)value)->getId());
+  }
+  return r;
+}
+
+int GEPInst::getDefRegId()
+{ 
+  return ((VirtRegValue*)result)->getId();
+}
+
+std::set<int> GEPInst::getUseRegIds()
+{
+  std::set<int> r;
+  if (isVirtRegValue(ptrval)) {
+    r.insert(((VirtRegValue*)ptrval)->getId());
+  }
+  for (Value* v : indexs) {
+    if (isVirtRegValue(v)) {
+      r.insert(((VirtRegValue*)v)->getId());
+    }
+  }
+  return r;
+}
+
+int ZextInst::getDefRegId()
+{
+  return ((VirtRegValue*)result)->getId();
+}
+
+std::set<int> ZextInst::getUseRegIds()
+{
+  std::set<int> r;
+  if (isVirtRegValue(value)) {
+    r.insert(((VirtRegValue*)value)->getId());
+  }
+  return r;
+}
+
+int IcmpInst::getDefRegId()
+{
+  return ((VirtRegValue*)result)->getId();
+}
+
+std::set<int> IcmpInst::getUseRegIds()
+{
+  std::set<int> r;
+  if (isVirtRegValue(op1)) {
+    r.insert(((VirtRegValue*)op1)->getId());
+  } 
+  if (isVirtRegValue(op2)) {
+    r.insert(((VirtRegValue*)op2)->getId());
+  }
+  return r;
+}
+
+int CallInst::getDefRegId()
+{
+  if (result == NULL) {
+    return -1;
+  }
+  return ((VirtRegValue*)result)->getId();
+}
+
+std::set<int> CallInst::getUseRegIds()
+{
+  std::set<int> r;
+  for (Value* v : args) {
+    if (isVirtRegValue(v)) {
+      r.insert(((VirtRegValue*)v)->getId());
+    }
+  }
+  return r;
+}
+
+int RetInst::getDefRegId()
+{
+  return -1;
+}
+
+std::set<int> RetInst::getUseRegIds()
+{
+  std::set<int> r;
+  if (!isVoid) {
+    if (isVirtRegValue(value)) {
+      r.insert(((VirtRegValue*)value)->getId());
+    }
+  }
+  return r;
+}
+
+int BrInst::getDefRegId()
+{
+  return -1;
+}
+
+std::set<int> BrInst::getUseRegIds()
+{
+  std::set<int> r;
+  if (!isUnCond) {
+    if (isVirtRegValue(cond)) {
+      r.insert(((VirtRegValue*)cond)->getId());
+    }
+  }
+  return r;
+}
+
+int PhiInst::getDefRegId()
+{
+  return ((VirtRegValue*)result)->getId();
+}
+
+std::set<int> PhiInst::getUseRegIds()
+{
+  std::set<int> r;
+  for (std::pair<Value*, LabelValue*> it : vardefs) {
+    if (isVirtRegValue(it.first)) {
+      r.insert(((VirtRegValue*)it.first)->getId());
+    }
+  }
+  return r;
 }

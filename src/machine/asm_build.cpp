@@ -157,6 +157,16 @@ AsmReg* value2asmReg(Value* value)
   return NULL;
 }
 
+AsmImm* value2asmImm(Value* value) 
+{
+  if (!isNumberConstant(value)) {
+    panic("error");
+  }
+  NumberConstant* numberValue = ((NumberConstant*)value);
+  AsmImm* imm = allocAsmImm(numberValue->value);
+  return imm;
+}
+
 /* 解析全局int数组或int初始化 */
 void globalInitValue2asmData(GlobalInitValue* globalInitValue, std::vector<int>* datas)
 {
@@ -336,19 +346,90 @@ AsmFunction* function2asm(Function* function)
 void binaryInst2asm( BinaryInst* binaryInst)
 {
   AsmInstIdtfr idtfr, idtfr2;
+  AsmOperand *op1, *op2, *result;
   switch (binaryInst->binaryInstType)
   {
   case BinaryInstIdtfr::ADD_BII:
-    idtfr = AsmInstIdtfr::ADDU_AII;   goto lb1;
+    result = value2asmReg(binaryInst->result);
+    if (isVirtRegValue(binaryInst->op1) && isVirtRegValue(binaryInst->op2)) {
+      op1 = value2asmReg(binaryInst->op1);
+      op2 = value2asmReg(binaryInst->op2);
+      idtfr = AsmInstIdtfr::ADDU_AII; 
+    } else if (isVirtRegValue(binaryInst->op1) && isNumberConstant(binaryInst->op2)) {
+      op1 = value2asmReg(binaryInst->op1);
+      op2 = value2asmImm(binaryInst->op2);
+      idtfr = AsmInstIdtfr::ADDIU_AII; 
+    } else if (isVirtRegValue(binaryInst->op2) && isNumberConstant(binaryInst->op1)) {
+      op1 = value2asmReg(binaryInst->op2);
+      op2 = value2asmImm(binaryInst->op1);
+      idtfr = AsmInstIdtfr::ADDIU_AII;
+    } else {
+      op1 = value2asmReg(binaryInst->op1);
+      op2 = value2asmImm(binaryInst->op2);
+      idtfr = AsmInstIdtfr::ADDIU_AII; 
+    }
+    goto lb1;
   case BinaryInstIdtfr::SUB_BII:
-    idtfr = AsmInstIdtfr::SUBU_AII;   goto lb1;
+    result = value2asmReg(binaryInst->result);
+    if (isVirtRegValue(binaryInst->op1) && isVirtRegValue(binaryInst->op2)) { /* reg - reg */
+      op1 = value2asmReg(binaryInst->op1);
+      op2 = value2asmReg(binaryInst->op2);
+      idtfr = AsmInstIdtfr::SUBU_AII;
+    } else if (isVirtRegValue(binaryInst->op1) && isNumberConstant(binaryInst->op2)) { /* reg - imm = reg + -imm */
+      op1 = value2asmReg(binaryInst->op1);
+      op2 = new AsmImm(-1 * ((NumberConstant*)binaryInst->op2)->value);
+      idtfr = AsmInstIdtfr::ADDIU_AII;
+    } else if (isVirtRegValue(binaryInst->op2) && isNumberConstant(binaryInst->op1)) { /* imm - reg */
+      op1 = value2asmReg(binaryInst->op1);
+      op2 = value2asmReg(binaryInst->op2);
+      idtfr = AsmInstIdtfr::SUBU_AII;
+    } else { /* imm - imm */
+      op1 = name2PhysAsmReg["zero"];
+      op2 = new AsmImm(((NumberConstant*)binaryInst->op1)->value - ((NumberConstant*)binaryInst->op2)->value);
+      idtfr = AsmInstIdtfr::ADDIU_AII;
+    }
+    goto lb1;
   case BinaryInstIdtfr::AND_BII:
-    idtfr = AsmInstIdtfr::AND_AII;    goto lb1;
+    result = value2asmReg(binaryInst->result);
+    if (isVirtRegValue(binaryInst->op1) && isVirtRegValue(binaryInst->op2)) {
+      op1 = value2asmReg(binaryInst->op1);
+      op2 = value2asmReg(binaryInst->op2);
+      idtfr = AsmInstIdtfr::AND_AII;
+    } else if (isVirtRegValue(binaryInst->op1) && isNumberConstant(binaryInst->op2)) { /* reg and imm */
+      op1 = value2asmReg(binaryInst->op1);
+      op2 = value2asmImm(binaryInst->op2);
+      idtfr = AsmInstIdtfr::ANDI_AII;
+    } else if (isVirtRegValue(binaryInst->op2) && isNumberConstant(binaryInst->op1)) { /* imm and reg */
+      op1 = value2asmReg(binaryInst->op2);
+      op2 = value2asmImm(binaryInst->op1);
+      idtfr = AsmInstIdtfr::ANDI_AII;
+    } else { /* imm and imm */
+      op1 = name2PhysAsmReg["zero"];
+      op2 = new AsmImm(((NumberConstant*)binaryInst->op1)->value & ((NumberConstant*)binaryInst->op2)->value);
+      idtfr = AsmInstIdtfr::ADDIU_AII;
+    }
+    goto lb1;
   case BinaryInstIdtfr::OR_BII:
-    idtfr = AsmInstIdtfr::OR_AII;     goto lb1;
-    lb1:
-    blockAddInst(idtfr, {WRR(value2asmReg(binaryInst->result),
-      value2asmReg(binaryInst->op1),value2asmReg(binaryInst->op2))});
+    result = value2asmReg(binaryInst->result);
+    if (isVirtRegValue(binaryInst->op1) && isVirtRegValue(binaryInst->op2)) {
+      op1 = value2asmReg(binaryInst->op1);
+      op2 = value2asmReg(binaryInst->op2);
+      idtfr = AsmInstIdtfr::OR_AII;
+    } else if (isVirtRegValue(binaryInst->op1) && isNumberConstant(binaryInst->op2)) {
+      op1 = value2asmReg(binaryInst->op1);
+      op2 = value2asmImm(binaryInst->op2);
+      idtfr = AsmInstIdtfr::ORI_AII;
+    } else if (isVirtRegValue(binaryInst->op2) && isNumberConstant(binaryInst->op1)) {
+      op1 = value2asmReg(binaryInst->op2);
+      op2 = value2asmImm(binaryInst->op1);
+      idtfr = AsmInstIdtfr::ORI_AII;
+    } else {
+      op1 = name2PhysAsmReg["zero"];
+      op2 = new AsmImm(((NumberConstant*)binaryInst->op1)->value | ((NumberConstant*)binaryInst->op2)->value);
+      idtfr = AsmInstIdtfr::ADDIU_AII;
+    }
+    goto lb1;
+      lb1: blockAddInst(idtfr, {WRR(result, op1, op2)});
     break;
   case BinaryInstIdtfr::MUL_BII:
     idtfr = AsmInstIdtfr::MULT_AII;
@@ -401,13 +482,6 @@ void storeInst2asm(StoreInst* storeInst)
   AsmImm* offset0 = allocAsmImm(0);
   AsmImm* imm;
   // /* 如果是将函数参数挪到内存的store指令，（先load再store，假定所有函数参数均内存传递） */
-  // /* TODO : 在blockAddInst中添加判断条件使用的虚拟寄存器是否是函数参数，若是则先load */
-  // /* lw rt, imm(base) */
-  // if (isFuncFArg(storeInst->value)) {
-  //   blockAddInst(AsmInstIdtfr::LW_AII, 
-  //   {WRR(rt,allocfuncArgOffset(storeInst->value), 
-  //   name2PhysAsmReg["sp"])});
-  // }
   if (isGlobalValue(storeInst->pointer)) {
     blockAddInst(AsmInstIdtfr::SW_AII, {RR(rt,allocAsmLabel(getGlobalValueName(storeInst->pointer)))});
   } else if (isVirtRegValue(storeInst->pointer) && 
@@ -427,16 +501,36 @@ AsmReg* icmpInst2asm( IcmpInst* icmpInst)
   AsmReg* op1 = value2asmReg(icmpInst->op1);
   AsmReg* op2 = value2asmReg(icmpInst->op2);
   AsmImm* imm1 = allocAsmImm(1);
-  AsmReg* zero = name2PhysAsmReg["zero"];
+  // AsmReg* zero = name2PhysAsmReg["zero"];
+    // AsmOperand *op1, *op2;
+  // AsmInstIdtfr idtfr;
+  // bool hasImm;
+  // if (isVirtRegValue(icmpInst->op1) && isVirtRegValue(icmpInst->op2)) {
+  //   op1 = value2asmReg(icmpInst->op1);
+  //   op2 = value2asmReg(icmpInst->op2);
+  //   hasImm = false;
+  // } else if (isVirtRegValue(icmpInst->op1) && isNumberConstant(icmpInst->op2)) {
+  //   op1 = value2asmReg(icmpInst->op1);
+  //   op2 = value2asmImm(icmpInst->op2);
+  //   hasImm = true;
+  // } else if (isVirtRegValue(icmpInst->op2) && isNumberConstant(icmpInst->op1)) {
+  //   op1 = value2asmReg(icmpInst->op2);
+  //   op2 = value2asmImm(icmpInst->op1);
+  //   hasImm = true;
+  // } else  {
+  //   op1 = value2asmReg(icmpInst->op1);
+  //   op2 = value2asmReg(icmpInst->op2);
+  //   hasImm = false;
+  // }
   switch (icmpInst->cond)
   {
-  case ICMPCASE::EQ_ICMPCASE:   
+  case ICMPCASE::EQ_ICMPCASE:
+
     blockAddInst(AsmInstIdtfr::XOR_AII, {WRR(result, op2, op1)});
     blockAddInst(AsmInstIdtfr::SLTIU_AII, {WRR(result, result, imm1)});
     break;
   case ICMPCASE::NE_ICMPCASE:
     blockAddInst(AsmInstIdtfr::XOR_AII, {WRR(result, op2, op1)});
-    blockAddInst(AsmInstIdtfr::SLTU_AII, {WRR(result, zero, result)});
     break;
   case ICMPCASE::UGT_ICMPCASE:
     blockAddInst(AsmInstIdtfr::SLTU_AII, {WRR(result, op2, op1)});
@@ -491,37 +585,80 @@ void gepInst2asm( GEPInst* gepInst)
 {
   /* 如果是ptrval全局变量，需要用la获取地址 */ 
   AsmReg* result = value2asmReg(gepInst->result); /* 最后得到的地址存在这个寄存器里 */
+  bool resultIsInit = false;
+  bool hasLa = false;
+  int constByteOffset = 0;
+  AsmReg* base = name2PhysAsmReg["zero"];
   /* 将baseAddr赋给result */
   /* 如果是全局变量需要先la到result中 */
   if (isGlobalValue(gepInst->ptrval)) {
     blockAddInst(AsmInstIdtfr::LA_AII, {WR(result, allocAsmLabel(getGlobalValueName(gepInst->ptrval)))});
+    resultIsInit = true;
+    hasLa = true;
   } else {
     /* 如果gep的ptrval不在变量表里，就直接将result置为ptrval */
     if (virtRegId2stackOffset.count(((VirtRegValue*)gepInst->ptrval)->getId()) == 0) {
       AsmReg* baseAddr = value2asmReg(gepInst->ptrval);
-      blockAddInst(AsmInstIdtfr::ADDU_AII, {WRR(result, name2PhysAsmReg["zero"], baseAddr)});
+      base = baseAddr;
+      // blockAddInst(AsmInstIdtfr::ADDU_AII, {WRR(result, name2PhysAsmReg["zero"], baseAddr)});
     } else {
       /* 否则需要将result设为sp加栈中的偏移 */
       AsmImm* offset = virtRegId2stackOffset[((VirtRegValue*)gepInst->ptrval)->getId()];
-      blockAddInst(AsmInstIdtfr::ADDIU_AII, {WRR(result, name2PhysAsmReg["sp"], offset)});
+      constByteOffset = offset->immediate;
+      base = name2PhysAsmReg["sp"];
+      // blockAddInst(AsmInstIdtfr::ADDIU_AII, {WRR(result, name2PhysAsmReg["sp"], offset)});
     }
   }
-
+  /* 首先对args中所有的常量，计算常数偏移量 */
   Type* nowType = gepInst->elemType;
+  for (u_long i = 0; i < gepInst->indexs.size(); i++) {
+    if (isNumberConstant(gepInst->indexs[i])) {
+      /* 获取类型大小 */
+      int typeSizeByte = getTypeWordSize(nowType) * 4;
+      int nowOffset = ((NumberConstant*)(gepInst->indexs[i]))->value;
+      constByteOffset += typeSizeByte * nowOffset;
+    }
+    /* 将类型剥离一层 */
+    if (i < gepInst->indexs.size() - 1) {
+      nowType = getArrayElemType(nowType);
+    }
+  }
+  if (! (base == name2PhysAsmReg["zero"] && constByteOffset == 0)) {
+    if (hasLa) {
+      if (constByteOffset) {
+        blockAddInst(AsmInstIdtfr::ADDIU_AII, {WRR(result, result, allocAsmImm(constByteOffset))});
+      }
+      if (base != name2PhysAsmReg["zero"]) {
+        blockAddInst(AsmInstIdtfr::ADDU_AII, {WRR(result, result, base)});
+      }
+    } else {
+      blockAddInst(AsmInstIdtfr::ADDIU_AII, {WRR(result, base, allocAsmImm(constByteOffset))});
+    }
+    resultIsInit = true;
+  }
+  
+  nowType = gepInst->elemType;
   AsmReg* nowOffset;
   AsmReg* typeSizeReg = allocVirtAsmReg();
   for (u_long i = 0; i < gepInst->indexs.size(); i++) {
-    /* 获取类型大小 */
-    int typeSizeByte = getTypeWordSize(nowType) * 4;
-    /* 将类型大小存入typeSizeReg寄存器 */
-    blockAddInst(AsmInstIdtfr::ADDIU_AII, {WRR(typeSizeReg, name2PhysAsmReg["zero"], allocAsmImm(typeSizeByte))});
-    /* 获取当前类型偏移的寄存器nowOffset */
-    nowOffset = value2asmReg(gepInst->indexs[i]);
-    /* 类型大小*类型偏移，结果存在typeSizeReg中 */
-    blockAddInst(AsmInstIdtfr::MULT_AII, {RR(typeSizeReg, nowOffset)});
-    blockAddInst(AsmInstIdtfr::MFLO_AII, {W(typeSizeReg)});
-    /* 将result加上typeSizeReg */
-    blockAddInst(AsmInstIdtfr::ADDU_AII, {WRR(result, result, typeSizeReg)});
+    if (isVirtRegValue(gepInst->indexs[i])) {
+      /* 获取类型大小 */
+      int typeSizeByte = getTypeWordSize(nowType) * 4;
+      /* 将类型大小存入typeSizeReg寄存器 */
+      blockAddInst(AsmInstIdtfr::ADDIU_AII, {WRR(typeSizeReg, name2PhysAsmReg["zero"], allocAsmImm(typeSizeByte))});
+      /* 获取当前类型偏移的寄存器nowOffset */
+      nowOffset = value2asmReg(gepInst->indexs[i]);
+      /* 类型大小*类型偏移，结果存在typeSizeReg中 */
+      blockAddInst(AsmInstIdtfr::MULT_AII, {RR(typeSizeReg, nowOffset)});
+      blockAddInst(AsmInstIdtfr::MFLO_AII, {W(typeSizeReg)});
+      /* 将result加上typeSizeReg */
+      if (!resultIsInit) {
+        blockAddInst(AsmInstIdtfr::ADDU_AII, {WRR(result, name2PhysAsmReg["zero"], typeSizeReg)});
+        resultIsInit = true;
+      } else {
+        blockAddInst(AsmInstIdtfr::ADDU_AII, {WRR(result, result, typeSizeReg)});
+      }
+    }
     /* 将类型剥离一层 */
     if (i < gepInst->indexs.size() - 1) {
       nowType = getArrayElemType(nowType);

@@ -85,7 +85,9 @@ enum AsmInstIdtfr {
   DIV_AII,    /* div rs, rt           (HI, LO)<- GPR[rs] / GPR[rt]商存放在LO寄存器，余数存放在HI寄存器 */
   XOR_AII,    /* xor rd, rs, rt       GPR[rd] <- GPR[rs] XOR GPR[rt] */
   AND_AII,    /* and rd, rs, rt       GPR[rd] <- GPR[rs] AND GPR[rt] */
+  ANDI_AII,   /* and rd, rs, imm       GPR[rd] <- GPR[rs] AND imm */
   OR_AII,     /* or rd, rs, rt        GPR[rd] <- GPR[rs] OR GPR[rt] */
+  ORI_AII,    /* or rd, rs, imm        GPR[rd] <- GPR[rs] OR imm */
   MFHI_AII,   /* mfhi rd              GPR[rd] <- HI */
   MFLO_AII,   /* mflo rd              GPR[rd] <- LO */
   LW_AII,     /* lw rt, imm(base)  GPR[rt] <- memory[GPR[base]+imm] */

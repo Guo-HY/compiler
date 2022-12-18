@@ -252,15 +252,10 @@ static void calConflictGraph(AsmFuncOptMsg* funcMsg)
 }
 
 /* 参与全局寄存器分配的物理寄存器 */
-// std::vector<std::string> allocRegPool = {
-//   "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",
-//   "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", 
-//    "a0", "a1", "a2", "a3",
-// };
 std::vector<std::string> allocRegPool = {
   "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",
   "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", 
-   "a0", "a1", "a2", "a3",
+  "a1", "a2", "a3",
 };
 
 struct conflictGraphNode {
@@ -311,9 +306,9 @@ static void allocReg(AsmFuncOptMsg* funcMsg)
     nowNode = it->first;
     LRWithDegree.erase(nowNode);
     /* 标记是否分配寄存器并插入队列 */
-    /* TODO : 这里标记为not的实际上在分配后可以再扫一遍 */
     if (nowNode->degree >= validRegNum) {
       funcMsg->LR2physRegName[nowNode->LR] = "not";
+      funcMsg->spillVirtRegNum ++;
     } else {
       funcMsg->LR2physRegName[nowNode->LR] = "yes";
     }
@@ -352,28 +347,39 @@ static void allocReg(AsmFuncOptMsg* funcMsg)
   }
 }
 
-// void allocStack(AsmFuncOptMsg* funcMsg)
-// {
-//   AsmFunction* func = funcMsg->asmFunction;
-//   int nowSpOffsetWord = func->stackWordSize;
-//   for (std::pair<int, std::string> it : funcMsg->LR2physRegName) {
-//     if (it.second == "not") {
-//       funcMsg->stackLR2stackOffset[it.first] = new AsmImm(nowSpOffsetWord * 4);
-//       nowSpOffsetWord++;
-//     }
-//     if (it.second == "yes") {
-//       panic("error");
-//     }
-//   }
-//   int addWordSize = nowSpOffsetWord - func->stackWordSize;
-//   func->frameSize.first->immediate = nowSpOffsetWord * -4;
-//   func->frameSize.second->immediate = nowSpOffsetWord * 4;
-//   std::unordered_map<int, AsmImm*>::iterator iter;
-//     for (iter = func->funcArgsId2stackOffset.begin();
-//        iter != func->funcArgsId2stackOffset.end(); iter++) {
-//       iter->second->immediate += addWordSize * 4;
-//     }
-// }
+/* 迭代给标记为not的虚拟寄存器尝试分配物理寄存器，直到不动点 */
+static void iterAllocReg(AsmFuncOptMsg* funcMsg)
+{
+  /* 首先将所有标记为not的LR放在一个set里 */
+  int beforeSpillNum = funcMsg->spillVirtRegNum;
+  std::set<int> notLR;
+  for (std::pair<int, std::string> it : funcMsg->LR2physRegName) {
+    if (it.second == "not") {
+      notLR.insert(it.first);
+    }
+  }
+  /* 迭代直到不动点 */
+  int iterNum = 0;
+  bool change = true;
+  while (change) {
+    iterNum++;
+    change = false;
+    for (auto it = notLR.begin(); it != notLR.end(); it++) {
+      int LR = *it;
+      for (std::string regName : allocRegPool) {
+        if (isNoConflictReg(regName, funcMsg->conflictGraph[LR], funcMsg)) {
+          funcMsg->LR2physRegName[LR] = regName;
+          change = true;
+          it = notLR.erase(it);
+          funcMsg->spillVirtRegNum--;
+          break;
+        }
+      }
+    }
+  }
+  Log("in iterAllocReg : beforeSpillNum = %d, afterSpillNum = %d, iterNum=%d",
+    beforeSpillNum, funcMsg->spillVirtRegNum, iterNum);
+}
 
 /* 这里仅映射分配了物理寄存器寄存器的虚拟寄存器。
   被逐出的虚拟寄存器使用plainRegAllocator分配
@@ -512,6 +518,7 @@ static void funcGraphRegAllocator(AsmFuncOptMsg* funcMsg)
   // return;
   /* 分配物理寄存器 */
   allocReg(funcMsg);
+  iterAllocReg(funcMsg);
   // return;
   // /* 给没有分配寄存器的LR分配栈空间 */
   // allocStack(funcMsg);
@@ -598,6 +605,7 @@ void printConflictGraph(FILE* fp, AsmFuncOptMsg* funcMsg)
 void printLR2physRegName(FILE* fp, AsmFuncOptMsg* funcMsg)
 {
   fprintf(fp, "----------printLR2physRegName-------------");
+  fprintf(fp ,"now spillVirtRegNum = %d\n", funcMsg->spillVirtRegNum);
   for (std::pair<int, std::string>it : funcMsg->LR2physRegName) {
     fprintf(fp, " LR = %d, physReg=%s#\n", it.first, it.second.c_str());
   }
