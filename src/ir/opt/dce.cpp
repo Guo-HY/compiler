@@ -1,9 +1,9 @@
 #include "opt.hpp"
 
 
-std::unordered_map<int, Instruction*> regId2DefInst;
+static std::unordered_map<int, Instruction*> regId2DefInst;
 
-void insertRegId2DefInst(int regId, Instruction* defInst) 
+static void insertRegId2DefInst(int regId, Instruction* defInst) 
 {
   if (regId2DefInst.count(regId) != 0) {
     panic("error");
@@ -28,10 +28,10 @@ static void dceInit(Function* func)
 
 /* 找到关键操作，ret，br，call getint，call putstr，call putint， 
    call putch，store是关键指令。*/
-std::list<Instruction*> usefulInsts; /* 待检查指令队列 */
-std::set<Instruction*> doneUsefulInsts; /* 已经检查完毕的指令 */
+static std::list<Instruction*> usefulInsts; /* 待检查指令队列 */
+static std::set<Instruction*> doneUsefulInsts; /* 已经检查完毕的指令 */
 
-bool isCriticalInst(Instruction* inst)
+static bool isCriticalInst(Instruction* inst)
 {
   if (isRetInst(inst) || isBrInst(inst) || isStoreInst(inst)) {
     return true;

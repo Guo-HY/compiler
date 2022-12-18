@@ -206,10 +206,11 @@ static void varRenaming(FunctionOptMsg* funcMsg)
         if (funcMsg->varAddrRegId2defBblk.count(addrReg->getId()) != 0) {
           /* load出来的一定是一个寄存器,但是变量的到达定义不一定是寄存器 */
           Value* reachdefValue = bblkMsg->getReachDefValue(addrReg->getId());
-          /* 如果reachdefValue是寄存器，那么直接改编号就可以了 */
+          /* 如果reachdefValue是寄存器，那么直接改编号就可以了,这里丢失了对象唯一性 */
           if (isVirtRegValue(reachdefValue)) {
             /* 假设一个函数中编号相同的虚拟寄存器，对象也相同（同一块内存） */
-            ((VirtRegValue*)(((LoadInst*)*it1)->result))->id = ((VirtRegValue*)reachdefValue)->getId(); /* 直接改id */
+            updateInstUseValue(it1, insts, ((LoadInst*)*it1)->result, reachdefValue);
+            // ((VirtRegValue*)(((LoadInst*)*it1)->result))->id = ((VirtRegValue*)reachdefValue)->getId(); /* 直接改id */
             /* 标记为freshLoad */
             freshLoadRegId2AddrId[((VirtRegValue*)reachdefValue)->getId()] = addrReg->getId();
           } else if (isNumberConstant(reachdefValue)){

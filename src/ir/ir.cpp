@@ -478,6 +478,11 @@ void BrInst::updateUseValue(Value* oldv, Value* newv)
 
 void PhiInst::updateUseValue(Value* oldv, Value* newv)
 {
+  for (u_long i = 0; i < vardefs.size(); i++) {
+    if (vardefs[i].first == oldv) {
+      vardefs[i].first = newv;
+    }
+  }
 }
 
 bool BinaryInst::isUseThisReg(int virtRegId)
@@ -632,6 +637,11 @@ bool PhiInst::isUseThisReg(int virtRegId)
   return false;
 }
 
+Value* BinaryInst::getDefReg()
+{
+  return result;
+}
+
 int BinaryInst::getDefRegId()
 {
   return ((VirtRegValue*)result)->getId();
@@ -649,6 +659,11 @@ std::set<int> BinaryInst::getUseRegIds()
   return r;
 }
 
+Value* AllocaInst::getDefReg()
+{
+  return result;
+}
+
 int AllocaInst::getDefRegId()
 {
   return ((VirtRegValue*)result)->getId();
@@ -658,6 +673,11 @@ std::set<int> AllocaInst::getUseRegIds()
 {
   std::set<int> r;
   return r;
+}
+
+Value* LoadInst::getDefReg()
+{
+  return result;
 }
 
 int LoadInst::getDefRegId()
@@ -672,6 +692,11 @@ std::set<int> LoadInst::getUseRegIds()
     r.insert(((VirtRegValue*)pointer)->getId());
   }
   return r;
+}
+
+Value* StoreInst::getDefReg()
+{
+  return NULL;
 }
 
 int StoreInst::getDefRegId()
@@ -689,6 +714,11 @@ std::set<int> StoreInst::getUseRegIds()
     r.insert(((VirtRegValue*)value)->getId());
   }
   return r;
+}
+
+Value* GEPInst::getDefReg()
+{
+  return result;
 }
 
 int GEPInst::getDefRegId()
@@ -709,6 +739,10 @@ std::set<int> GEPInst::getUseRegIds()
   }
   return r;
 }
+Value* ZextInst::getDefReg()
+{
+  return result;
+}
 
 int ZextInst::getDefRegId()
 {
@@ -722,6 +756,11 @@ std::set<int> ZextInst::getUseRegIds()
     r.insert(((VirtRegValue*)value)->getId());
   }
   return r;
+}
+
+Value* IcmpInst::getDefReg()
+{
+  return result;
 }
 
 int IcmpInst::getDefRegId()
@@ -739,6 +778,11 @@ std::set<int> IcmpInst::getUseRegIds()
     r.insert(((VirtRegValue*)op2)->getId());
   }
   return r;
+}
+
+Value* CallInst::getDefReg()
+{
+  return result;
 }
 
 int CallInst::getDefRegId()
@@ -760,6 +804,11 @@ std::set<int> CallInst::getUseRegIds()
   return r;
 }
 
+Value* RetInst::getDefReg()
+{
+  return NULL;
+}
+
 int RetInst::getDefRegId()
 {
   return -1;
@@ -776,6 +825,11 @@ std::set<int> RetInst::getUseRegIds()
   return r;
 }
 
+Value* BrInst::getDefReg()
+{
+  return NULL;
+}
+
 int BrInst::getDefRegId()
 {
   return -1;
@@ -790,6 +844,11 @@ std::set<int> BrInst::getUseRegIds()
     }
   }
   return r;
+}
+
+Value* PhiInst::getDefReg()
+{
+  return result;
 }
 
 int PhiInst::getDefRegId()

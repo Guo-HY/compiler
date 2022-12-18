@@ -299,6 +299,7 @@ class Instruction : public Value {
   virtual std::string toString() = 0;
   virtual void updateUseValue(Value* oldv, Value* newv) = 0;
   virtual bool isUseThisReg(int virtRegId) = 0;
+  virtual Value* getDefReg() = 0;
   virtual int getDefRegId() = 0;
   virtual std::set<int> getUseRegIds() = 0;
 };
@@ -321,6 +322,7 @@ class BinaryInst : public Instruction {
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
   bool isUseThisReg(int virtRegId) override;
+  Value* getDefReg() override;
   int getDefRegId() override;
   std::set<int> getUseRegIds() override;
 };
@@ -334,6 +336,7 @@ class AllocaInst : public Instruction {
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
   bool isUseThisReg(int virtRegId) override;
+  Value* getDefReg() override;
   int getDefRegId() override;
   std::set<int> getUseRegIds() override;
 };
@@ -346,6 +349,7 @@ class LoadInst : public Instruction {
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
   bool isUseThisReg(int virtRegId) override;
+  Value* getDefReg() override;
   int getDefRegId() override;
   std::set<int> getUseRegIds() override;
 };
@@ -359,6 +363,7 @@ class StoreInst : public Instruction {
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
   bool isUseThisReg(int virtRegId) override;
+  Value* getDefReg() override;
   int getDefRegId() override;
   std::set<int> getUseRegIds() override;
 };
@@ -375,6 +380,7 @@ class GEPInst : public Instruction {
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
   bool isUseThisReg(int virtRegId) override;
+  Value* getDefReg() override;
   int getDefRegId() override;
   std::set<int> getUseRegIds() override;
 };
@@ -386,6 +392,7 @@ class ZextInst : public Instruction {
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
   bool isUseThisReg(int virtRegId) override;
+  Value* getDefReg() override;
   int getDefRegId() override;
   std::set<int> getUseRegIds() override;
 };
@@ -412,6 +419,7 @@ class IcmpInst : public Instruction {
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
   bool isUseThisReg(int virtRegId) override;
+  Value* getDefReg() override;
   int getDefRegId() override;
   std::set<int> getUseRegIds() override;
 };
@@ -426,6 +434,7 @@ class CallInst : public Instruction {
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
   bool isUseThisReg(int virtRegId) override;
+  Value* getDefReg() override;
   int getDefRegId() override;
   std::set<int> getUseRegIds() override;
 };
@@ -439,6 +448,7 @@ class RetInst : public Instruction {
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
   bool isUseThisReg(int virtRegId) override;
+  Value* getDefReg() override;
   int getDefRegId() override;
   std::set<int> getUseRegIds() override;
 };
@@ -451,6 +461,7 @@ class BrInst : public Instruction {
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
   bool isUseThisReg(int virtRegId) override;
+  Value* getDefReg() override;
   int getDefRegId() override;
   std::set<int> getUseRegIds() override;
 };
@@ -465,6 +476,7 @@ class PhiInst : public Instruction {
   std::string toString() override ;
   void updateUseValue(Value* oldv, Value* newv) override;
   bool isUseThisReg(int virtRegId) override;
+  Value* getDefReg() override;
   int getDefRegId() override;
   std::set<int> getUseRegIds() override;
 };

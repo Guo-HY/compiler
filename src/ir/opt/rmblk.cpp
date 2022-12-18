@@ -76,7 +76,9 @@ LabelValue* isEmptyBblk(BasicBlock* bblk)
 /* 删除空的（只有无条件跳转指令）的基本块 */
 void funcRmEmptyBlock(Function* func)
 {
-  /* 首先建立labelId到label对象的映射 */
+  /* 首先建立labelId到label对象的映射
+    这里看起来可以处理对象不一致的情况
+   */
   labelId2Values.clear();
   for (BasicBlock* bblk : func->basicBlocks) {
     insertLabelId2Values(bblk->label);

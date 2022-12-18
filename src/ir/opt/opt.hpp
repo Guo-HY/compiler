@@ -18,6 +18,7 @@ class BasicBlockOptMsg;
 void rmblk(Module* module);
 void mem2reg(Module* module);
 void deadCodeElim(Module* module);
+void globalConstantPropagation(Module* module);
 
 inline void optir(Module* module)
 {
@@ -38,6 +39,13 @@ inline void optir(Module* module)
   Log("after mem2reg");
   s = module->toString();
   fp = fopen("mem2reg.ll", "w");
+  fprintf(fp, "%s", s.c_str());
+  fclose(fp);
+  
+  globalConstantPropagation(module);
+  Log("after globalConstantPropagation");
+  s = module->toString();
+  fp = fopen("gcp.ll", "w");
   fprintf(fp, "%s", s.c_str());
   fclose(fp);
 
