@@ -23,46 +23,58 @@ void dullMulDiv(Module* module);
 
 inline void optir(Module* module)
 {
+  #ifdef ENABLE_Log
   std::string s;
   FILE* fp = fopen("base.ll", "w");
   s = module->toString();
   fprintf(fp, "%s", s.c_str());
   fclose(fp);
+  #endif
 
   rmblk(module);
   Log("after rmblk1");
+  #ifdef ENABLE_Log
   s = module->toString();
   fp = fopen("rmblk1.ll", "w");
   fprintf(fp, "%s", s.c_str());
   fclose(fp);
+  #endif
 
   mem2reg(module);
   Log("after mem2reg");
+  #ifdef ENABLE_Log
   s = module->toString();
   fp = fopen("mem2reg.ll", "w");
   fprintf(fp, "%s", s.c_str());
   fclose(fp);
+  #endif
   
   globalConstantPropagation(module);
   Log("after globalConstantPropagation");
+  #ifdef ENABLE_Log
   s = module->toString();
   fp = fopen("gcp.ll", "w");
   fprintf(fp, "%s", s.c_str());
   fclose(fp);
+  #endif
 
   dullMulDiv(module);
   Log("after dullMulDiv");
+  #ifdef ENABLE_Log
   s = module->toString();
   fp = fopen("dull.ll", "w");
   fprintf(fp, "%s", s.c_str());
   fclose(fp);
+  #endif
 
   deadCodeElim(module);
   Log("after deadCodeElim");
+  #ifdef ENABLE_Log
   s = module->toString();
   fp = fopen("dce.ll", "w");
   fprintf(fp, "%s", s.c_str());
   fclose(fp);
+  #endif
 
   // rmblk(module);
   // Log("after rmblk2");

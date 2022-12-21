@@ -493,10 +493,14 @@ void printLR2physRegName(FILE* fp, AsmFuncOptMsg* funcMsg);
 
 static void funcGraphRegAllocator(AsmFuncOptMsg* funcMsg)
 {
+  #ifdef ENABLE_Log
   FILE* fp = fopen("asmopt.log", "a");
+  #endif
   /* 求cfg，同时建立AsmBlockOptMsg，id2bblk */
   calFunctionCfg(funcMsg);
+  #ifdef ENABLE_Log
   printAsmCfg(fp, funcMsg);
+  #endif
   /* 将phi参数中的常量转变为前导块中的reg */
   /* 这里可能会插入冗余的add指令，但是不会导致正确性问题 */
   phiImm2Reg(funcMsg);
@@ -504,29 +508,30 @@ static void funcGraphRegAllocator(AsmFuncOptMsg* funcMsg)
   calUseKill(funcMsg);
   /* 求解liveout */
   calLiveOut(funcMsg);
+  #ifdef ENABLE_Log
   printUseKillLiveOut(fp, funcMsg);
-  // return;
+  #endif
   /* 计算LR的准备工作 */
   initLR(funcMsg);
   /* 计算活动范围 */
   calLR(funcMsg);
+  #ifdef ENABLE_Log
   printLR(fp, funcMsg);
-  // return;
+  #endif
   /* 计算冲突图 */
   calConflictGraph(funcMsg);
+  #ifdef ENABLE_Log
   printConflictGraph(fp, funcMsg);
-  // return;
+  #endif
   /* 分配物理寄存器 */
   allocReg(funcMsg);
   iterAllocReg(funcMsg);
-  // return;
-  // /* 给没有分配寄存器的LR分配栈空间 */
-  // allocStack(funcMsg);
   /* 完成寄存器映射，插入lw，sw指令 */
   mapVirtReg2Phys(funcMsg);
+  #ifdef ENABLE_Log
   printLR2physRegName(fp, funcMsg);
   fclose(fp);
-  // return;
+  #endif
   /* 插入保存寄存器指令 */
   insertSaveRecoverRegInst(funcMsg);
   /* 最后将没有分配物理寄存器的虚拟寄存器号统一转换为对应的LR */

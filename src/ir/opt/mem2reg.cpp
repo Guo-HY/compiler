@@ -278,13 +278,6 @@ static void varRenaming(FunctionOptMsg* funcMsg)
   }
 }
 
-// void printCFGLog(FILE* fp, FunctionOptMsg* funcOptMsg);
-// void printStrictlyDominated(FILE* fp, FunctionOptMsg* funcOptMsg);
-// void printVarDefUse(FILE* fp, FunctionOptMsg* funcOptMsg);
-// void printIdom(FILE* fp, FunctionOptMsg* funcOptMsg);
-// void printDF(FILE* fp, FunctionOptMsg* funcOptMsg);
-// void printInsertPhi(FILE* fp, FunctionOptMsg* funcOptMsg);
-
 static void printCFGLog(FILE* fp, FunctionOptMsg* funcOptMsg)
 {
   fprintf(fp, "cfg ------------------------\n");
@@ -366,35 +359,42 @@ static void printInsertPhi(FILE* fp, FunctionOptMsg* funcOptMsg)
 /* 以函数为单位进行mem2reg */
 static void funcMem2reg(Function* func)
 {
+  #ifdef ENABLE_Log
   FILE* fp = fopen("mem2reg.log", "a");
   fprintf(fp, "func name = %s\n", func->funcName.c_str());
+  #endif
 
   FunctionOptMsg* funcOptMsg = new FunctionOptMsg(func);
   /* 求CFG */
   calFunctionCfg(funcOptMsg);
+  #ifdef ENABLE_Log
   printCFGLog(fp, funcOptMsg);
-  // return;
+  #endif
   /* 求每个基本块的严格支配 */
   calStrictlyDominated(funcOptMsg);
+  #ifdef ENABLE_Log
   printStrictlyDominated(fp, funcOptMsg);
-  // return;
+  #endif
   /* 求每个基本块的直接支配者,入口块没有直接支配者 */
   calIdom(funcOptMsg);
+  #ifdef ENABLE_Log
   printIdom(fp, funcOptMsg);
-  // return;
+  #endif
   /* 求每个节点的支配边界 */
   calDF(funcOptMsg);
+  #ifdef ENABLE_Log
   printDF(fp, funcOptMsg);
-  // return;
+  #endif
   /* 计算变量的定义使用点 */
   calVarDefUse(funcOptMsg);
+  #ifdef ENABLE_Log
   printVarDefUse(fp, funcOptMsg);
-  // return;
-
+  #endif
   /* 插入phi节点 */
   insertPhi(funcOptMsg);
+  #ifdef ENABLE_Log
   printInsertPhi(fp, funcOptMsg);
-  // return;
+  #endif
   /* 变量重命名 */
   varRenaming(funcOptMsg);
   /* 将phi指令插入基本块中 */
