@@ -52,8 +52,11 @@ int main(int argc, char **argv)
   // freopen("table.txt", "w", stdout);
   // currentSymbolTable->toString(0);
 
-  // freopen("error.txt", "w", stdout);
-  // errorList.toString();
+  if (errorList.hasError()) {
+    freopen("error.txt", "w", stdout);
+    errorList.toString();
+    return 0;
+  }
 
   /* gen ir */
   Module* module = compUnit2ir(parser->getRoot(), funcDecls);

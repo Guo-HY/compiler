@@ -26,6 +26,10 @@ class ErrorList {
   }
 
   void toString();
+  
+  bool hasError() {
+    return this->errorInfos.size() > 0;
+  }
 
 };
 
